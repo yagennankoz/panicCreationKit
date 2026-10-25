@@ -82,7 +82,10 @@ pt pansim x68\anim\test1\test1.pan                 PC 上で再生時間と画�
 ```
 setup.bat  pt.bat     準備と、ツールの入口
 tools/                ツール（Python）。tools/setup/ に準備の仕組み
-x68/                  X68000 側のファイル（エミュレータで共有する所）。anim/ に作った .pan
+x68/                  X68000 側のファイル（エミュレータで共有する所）
+  anim/                 作った .pan の出力先
+  lib/                  .s に .include する 68000 のルーチン（VWAIT など。docs/LIBRARY.md）
+  bin/                  X68000 のアセンブラとリンカ（setup.bat が置く）
 samples/              サンプルの設定ファイルと素材
 docs/                 マニュアル（MANUAL.md）。setup が docs/panic/ に panic の付属ドキュメントを置く
 runtime/              setup.bat がダウンロードした物（Python、ffmpeg、run68）

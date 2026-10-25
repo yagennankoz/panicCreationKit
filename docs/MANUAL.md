@@ -831,6 +831,45 @@ python tools/pansim.py <file.pan> [--gif out.gif] [--png フォルダ] [--second
 | `predict_time.py`                                     | `predict_time.py <名前>`                                            | x68/anim/<名前> の再生時間の大まかな予測（pansim の方が正確）                                      |
 | `make_test_anim.py`                                   | —                                                                   | テスト用の素材を作る                                                                            |
 | `test_a_enc.py`                                       | `test_a_enc.py`                                                     | a_enc エンコーダが bpica.x の出力と一致するかの確認                                             |
+| `make_ref_images.py`                                  | `make_ref_images.py`                                                | 正解データ作り用のテスト画像を作る（10.1）                                                      |
+
+### 10.1 セルの正解データ（make_ref_images・gload.x・test_a_enc）
+
+このツールのグラフィックのセル（a_enc）は、当時のエンコーダ bpica.x とバイト単位で同じ出力になるように作ってあります。
+その確かめに使う「正解データ」（bpica.x が作ったセル・パレット・ログ）が `samples/reference/` にあります。
+
+**確かめるだけのとき**（ふつうはこれで十分です）
+
+```
+pt make_ref_images      # テスト画像を作る（samples/reference/src/*.png と、x68/ref/*.raw）
+pt test_a_enc           # 正解データと一致するか（最後に「すべて一致」と出れば OK）
+```
+
+**正解データを X68000 の上で作り直すとき**
+
+bpica.x は、画面に表示した絵を読んでセルにします（512x512・65536 色の画面の (0,0)〜(255,255)）。
+その画面に絵を出すのが `x68/gload.x` です（ソースは `x68/src/gload.s`）。
+
+- `gload <ファイル>`：画面を 512x512・65536 色にして、256x256 の生データ（1 ドット 1 ワード、GRB 5:5:5:1、131072 バイト）を (0,0) に表示する。
+  生データは `pt make_ref_images` が `x68/ref/` に作ります。
+- `gload`（ファイルを書かない）：画面を元に戻す。
+
+手順（エミュレータで `x68/` を H: に共有しているとして、X68000 の上で）：
+
+```
+H:\>gload ref\r1.raw
+H:\>bpica -p ref\r1.cel ref\r1.pal > ref\r1.log
+（r2〜r5 も同じように）
+H:\>gload ref\r7.raw
+H:\>copy ref\r1.pal ref\r7.pal
+H:\>bpica ref\r7.cel ref\r7.pal > ref\r7.log
+H:\>gload
+```
+
+- `-p` はパレットを新しく作ります。r7 は、r1 のパレットに色を足す場合（`-p` なし）の確かめです。
+- できた `x68/ref/` の `.cel`・`.pal`・`.log` を `samples/reference/` に写し、`pt test_a_enc` で確かめます。
+- テキスト面・スプライトの正解データ（`samples/reference/text/` の t1〜t4・tn1・s1）は、bpic.x 1.08 の `-t -h`・`-t`・`-s` で作ったものです。
+  bpic.x は setup.bat ではダウンロードしないので、作り直すときは自分で用意してください。
 
 ---
 
