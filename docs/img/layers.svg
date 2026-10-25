@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 390" width="760" height="390" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans CJK JP',sans-serif" font-size="13">
+  <!-- X68000 の画面の重なり順（panic.x の初期値：スプライト＞テキスト＞G0＞G1。BG はスプライトの面の中） -->
+  <rect width="760" height="390" fill="#ffffff"/>
+
+  <!-- 手前・奥の矢印 -->
+  <line x1="40" y1="338" x2="40" y2="44" stroke="#666" stroke-width="2"/>
+  <polygon points="40,34 33,48 47,48" fill="#666"/>
+  <text x="40" y="26" text-anchor="middle" font-size="12" fill="#333">手前</text>
+  <text x="40" y="356" text-anchor="middle" font-size="12" fill="#333">奥</text>
+
+  <!-- 面（上ほど手前） -->
+  <g stroke="#555" stroke-width="1">
+    <polygon points="80,78 290,78 330,40 120,40" fill="#f2a541"/>
+    <polygon points="80,130 290,130 330,92 120,92" fill="#f6c87a"/>
+    <polygon points="80,182 290,182 330,144 120,144" fill="#fae2b5"/>
+    <polygon points="80,234 290,234 330,196 120,196" fill="#7cc47c"/>
+    <polygon points="80,286 290,286 330,248 120,248" fill="#4a7bd0"/>
+    <polygon points="80,338 290,338 330,300 120,300" fill="#9bbbec"/>
+  </g>
+  <g text-anchor="middle" font-weight="bold" fill="#222">
+    <text x="205" y="64">スプライト</text>
+    <text x="205" y="116">BG0</text>
+    <text x="205" y="168">BG1</text>
+    <text x="205" y="220">テキスト面</text>
+    <text x="205" y="272" fill="#fff">G0</text>
+    <text x="205" y="324">G1</text>
+  </g>
+
+  <!-- 説明 -->
+  <g fill="#222">
+    <text x="345" y="56">16 色。16x16 を 128 枚まで</text>
+    <text x="345" y="108">16 色。8x8 のタイルを並べた面</text>
+    <text x="345" y="160">16 色。8x8 のタイルを並べた面</text>
+    <text x="345" y="212">16 色。1 ドット単位で描ける</text>
+    <text x="345" y="264">256 色</text>
+    <text x="345" y="316">256 色（G0 とパレット共通）</text>
+  </g>
+  <g fill="#777" font-size="12" font-family="Consolas,'Courier New',monospace">
+    <text x="345" y="74">plane = "sprite"</text>
+    <text x="345" y="126">plane = "bg0"</text>
+    <text x="345" y="178">plane = "bg1"</text>
+    <text x="345" y="230">plane = "text"</text>
+    <text x="345" y="282">plane = "g0"</text>
+    <text x="345" y="334">plane = "g1"</text>
+  </g>
+
+  <!-- order の単位 -->
+  <text x="610" y="26" font-size="12" fill="#555">order で並べ替える単位</text>
+  <g stroke="#555" stroke-width="1.5" fill="none">
+    <polyline points="600,42 610,42 610,180 600,180"/>
+    <polyline points="600,196 610,196 610,232 600,232"/>
+    <polyline points="600,248 610,248 610,336 600,336"/>
+  </g>
+  <g font-family="Consolas,'Courier New',monospace" font-size="13" fill="#222">
+    <text x="618" y="115">"sprite"</text>
+    <text x="618" y="218">"text"</text>
+    <text x="618" y="290">"graphic"</text>
+  </g>
+  <text x="618" y="308" font-size="11" fill="#555">中の順は</text>
+  <text x="618" y="322" font-size="11" fill="#555" font-family="Consolas,'Courier New',monospace">graphic_order</text>
+
+  <text x="80" y="378" font-size="12" fill="#444">図は既定の順。手前の面の透明な所（色 0）から奥の面が見える。</text>
+</svg>

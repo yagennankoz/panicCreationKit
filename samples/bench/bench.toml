@@ -1,0 +1,32 @@
+# mkbench.py の設定ファイルの例（python tools/mkbench.py samples/bench/bench.toml）
+# 導入 → キー待ち → ベンチ（10 秒、待たずに描いては切り替え、カウントをテキスト面に表示、効果音）→ 結果 → キー待ち → 終わり
+# 素材は python tools/make_test_anim.py samples/anim2 32 --static と python tools/make_test_anim.py --layers で作る
+
+name = "bench1"
+clock = "10mhz"
+
+[intro]                 # 導入部分（G0）。省略可
+src = "../anim2"
+fps = 12
+diff = true
+
+[bench]                 # ベンチ部分（G0 の PNG 連番）
+src = "../layer1/chara"
+seconds = 10            # 何秒数えるか
+count_every = 1         # 何ステップごとにカウントを 1 上げるか（1 ステップ＝1 コマ描いて表示を切り替える）
+diff = true
+sound = "se.wav"        # 効果音
+sound_step = 0          # ループの何コマ目で鳴らすか（0 始まり）
+
+[count]                 # カウントの数字（テキスト面、ROM フォント）
+x = 8                   # ベンチ中の位置（ドット。x は 8 の倍数）。素材の左上の白い印と重ならないよう下の方に
+y = 232
+scale = 1               # 1＝8x16、2＝16x32
+digits = 6
+color = "#FFFF00"
+result_x = 80           # 結果の画面での位置と大きさ
+result_y = 109
+result_scale = 2
+
+[result]                # 結果の画面（静止画）
+src = "result.png"

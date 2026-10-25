@@ -1,0 +1,39 @@
+# mkscene.py の設定ファイルの例：G1（背景）＋ G0（キャラ）＋ テキスト面 ＋ スプライト 2 層
+# （python tools/mkscene.py samples/layer1/scene4.toml）
+
+name = "lay4"
+clock = "10mhz"
+loops = 2
+diff = true
+timelog = true
+
+[[layer]]
+name = "chara"
+plane = "g0"
+src = "chara"
+base = true
+fps = 12
+
+[[layer]]
+name = "bg"
+plane = "g1"
+src = "bg"
+loop_ratio = 2.0
+
+[[layer]]
+name = "text"
+plane = "text"
+src = "text"
+loop_ratio = 1.0
+
+[[layer]]
+name = "star"
+plane = "sprite"      # スプライト（16 色。小さい絵向き。全コマのパターンを最初に定義する）
+src = "spr1"
+loop_ratio = 1.0      # 8 枚でキャラ 1 ループ
+
+[[layer]]
+name = "bat"
+plane = "sprite"      # 後に書いたスプライトの層ほど手前
+src = "spr2"
+fps = 8               # 4 枚を 8fps（0.5 秒で 1 回はばたく）

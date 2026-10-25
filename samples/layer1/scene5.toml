@@ -1,0 +1,36 @@
+# BG 面と重なり順の例（python tools/mkscene.py samples/layer1/scene5.toml）
+#   BG1＝空（横縞）、BG0＝レンガの壁と点滅する窓、スプライト＝横切る星、G0＝回る顔。
+#   order で「グラフィックを手前」にしているので、顔は BG やスプライトより手前に出る。
+
+name = "lay5"
+clock = "10mhz"
+loops = 2
+diff = true
+timelog = true
+order = ["graphic", "sprite", "text"]   # 手前から（既定は sprite, text, graphic）。BG はスプライトの層に入る
+graphic_order = ["g0", "g1"]            # グラフィックの中の順（既定 g0 が手前）
+
+[[layer]]
+name = "chara"
+plane = "g0"
+src = "chara"
+base = true
+fps = 12
+
+[[layer]]
+name = "wall"
+plane = "bg0"         # BG 面（8x8 のタイル。同じタイルは 1 つにまとめる）
+src = "bgt0"
+fps = 4               # 4 枚を 1 秒
+
+[[layer]]
+name = "sky"
+plane = "bg1"         # BG0 の後ろ
+src = "bgt1"
+fps = 1
+
+[[layer]]
+name = "star"
+plane = "sprite"
+src = "spr1"
+loop_ratio = 1.0

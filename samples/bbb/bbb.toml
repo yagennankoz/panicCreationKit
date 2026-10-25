@@ -1,0 +1,25 @@
+# mkanim.py の設定ファイルの例（python tools/mkanim.py --config samples/bbb/bbb.toml）
+# キーは mkanim.py のオプション名（- は _ でもよい）。ファイル名はこの設定ファイルからの相対。
+# コマンドラインで同じオプションを指定すると、そちらが優先される。
+
+name = "bbb12"            # 出力名（英数字 8 文字以内）→ x68/anim/bbb12/bbb12.pan
+src = "bbb10s.mp4"        # 動画、または PNG 連番のフォルダ
+fps = 12
+clock = "10mhz"           # 対象機（描画時間の見積もりに使う）
+
+# 絵
+diff = true               # 前フレーム差分
+stabilize = 24            # 前のコマと近い色は前のままにする（実写向け。目安 16〜24）
+dither = "none"           # none / fs / ordered
+
+# 動画の切り出し
+# start = 0.0
+# duration = 10.0
+
+# 音（動画に音があれば自動で使う。別の音を使うときは audio = "xxx.wav"）
+# gain = 0.0
+# no_audio = true
+
+# 再生
+loop = 1
+timelog = true            # 再生時間を anim\bbb12\time.txt に書く（確認用）

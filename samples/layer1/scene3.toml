@@ -1,0 +1,27 @@
+# mkscene.py の設定ファイルの例：G1（背景）＋ G0（キャラ）＋ テキスト面（字幕の枠と動く四角）の 3 層
+# （python tools/mkscene.py samples/layer1/scene3.toml）
+
+name = "lay3"
+clock = "10mhz"
+loops = 2
+diff = true
+timelog = true
+
+[[layer]]
+name = "chara"
+plane = "g0"
+src = "chara"
+base = true
+fps = 12
+
+[[layer]]
+name = "bg"
+plane = "g1"
+src = "bg"
+loop_ratio = 2.0      # 背景 1 ループ＝キャラ 2 ループ
+
+[[layer]]
+name = "text"
+plane = "text"        # テキスト面（いちばん手前、16 色。透明な所は下が見える）
+src = "text"
+loop_ratio = 1.0      # 6 枚でキャラ 1 ループと同じ長さ

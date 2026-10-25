@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 370" width="760" height="370" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans CJK JP',sans-serif" font-size="13">
+  <!-- 手で作る流れ：mkparts で素材とひな形 → .s を自分で書く → buildPan で .pan -->
+  <rect width="760" height="370" fill="#ffffff"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- 素材と mkparts -->
+  <rect x="16" y="40" width="140" height="70" rx="8" fill="#fff4e0" stroke="#e0a040"/>
+  <text x="86" y="66" text-anchor="middle" font-weight="bold">素材</text>
+  <text x="86" y="86" text-anchor="middle" font-size="12">画像（PNG・BMP など）</text>
+  <text x="86" y="102" text-anchor="middle" font-size="12">音（WAV・MP3 など）</text>
+  <line x1="86" y1="110" x2="86" y2="146" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="16" y="148" width="140" height="64" rx="8" fill="#eef3fb" stroke="#4a7bd0" stroke-width="1.5"/>
+  <text x="86" y="174" text-anchor="middle" font-weight="bold" font-family="Consolas,'Courier New',monospace">pt mkparts</text>
+  <text x="86" y="196" text-anchor="middle" font-size="12">変換して、ひな形を作る</text>
+  <line x1="156" y1="180" x2="192" y2="180" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- 出力先のフォルダ -->
+  <rect x="194" y="20" width="250" height="262" rx="10" fill="#f7f7f7" stroke="#888"/>
+  <text x="206" y="42" font-size="12" fill="#444">出力先のフォルダ（x68/anim/&lt;名前&gt;/）</text>
+  <rect x="208" y="54" width="222" height="58" rx="6" fill="#ffffff" stroke="#bbb"/>
+  <text x="220" y="78" font-weight="bold">素材のデータ</text>
+  <text x="220" y="99" font-size="12" font-family="Consolas,'Courier New',monospace">.cel  .spr  .pal  .pcm</text>
+  <rect x="208" y="124" width="222" height="70" rx="6" fill="#fff4e0" stroke="#e08a00" stroke-width="2.5"/>
+  <text x="220" y="148" font-weight="bold">&lt;名前&gt;.s　スケジュール</text>
+  <text x="220" y="168" font-size="12">何を・いつ・どこに描くか。</text>
+  <text x="220" y="185" font-size="12" fill="#c05a00" font-weight="bold">ひな形を自分で書き換える</text>
+  <rect x="208" y="206" width="222" height="62" rx="6" fill="#ffffff" stroke="#bbb"/>
+  <text x="220" y="230" font-weight="bold">&lt;名前&gt;.json　素材の一覧</text>
+  <text x="220" y="251" font-size="12">素材を足したら、1 行書き足す</text>
+
+  <!-- 素材を足す -->
+  <path d="M86,212 L86,322 L318,322 L318,284" fill="none" stroke="#888" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <text x="96" y="342" font-size="12" fill="#444">素材を足すときは、もう一度 mkparts（<tspan font-family="Consolas,'Courier New',monospace">--make cel,pal --pal-in</tspan>）</text>
+
+  <!-- buildPan -->
+  <line x1="444" y1="159" x2="478" y2="159" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="480" y="92" width="134" height="134" rx="10" fill="#eef3fb" stroke="#4a7bd0" stroke-width="1.5"/>
+  <text x="547" y="116" text-anchor="middle" font-weight="bold" font-family="Consolas,'Courier New',monospace">pt buildPan</text>
+  <g font-size="12" fill="#222">
+    <text x="492" y="144">1 ラベルの一覧を作る</text>
+    <text x="492" y="170">2 HAS／HLK で</text>
+    <text x="492" y="186">　 アセンブル・リンク</text>
+    <text x="492" y="212">3 素材をつなげる</text>
+  </g>
+
+  <!-- 出力 -->
+  <line x1="614" y1="159" x2="638" y2="159" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="640" y="134" width="108" height="50" rx="8" fill="#e6f4e6" stroke="#4a9a4a" stroke-width="1.5"/>
+  <text x="694" y="164" text-anchor="middle" font-weight="bold">.pan</text>
+  <line x1="694" y1="134" x2="694" y2="92" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="626" y="30" width="126" height="60" rx="8" fill="#f3f3f3" stroke="#888"/>
+  <text x="689" y="56" text-anchor="middle" font-weight="bold">実機・エミュレータ</text>
+  <text x="689" y="76" text-anchor="middle" font-size="12">panic で再生</text>
+  <line x1="694" y1="184" x2="694" y2="218" stroke="#888" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <rect x="626" y="220" width="126" height="56" rx="8" fill="#ffffff" stroke="#888" stroke-dasharray="5 4"/>
+  <text x="638" y="242" font-size="12"><tspan font-weight="bold">--sim</tspan> を付けると</text>
+  <text x="638" y="262" font-size="12">PC で再生時間を確認</text>
+
+  <!-- 直してもう一度 -->
+  <path d="M547,226 C547,300 470,250 434,196" fill="none" stroke="#c05a00" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <text x="478" y="300" font-size="12" fill="#c05a00">.s を直して、もう一度 buildPan</text>
+</svg>

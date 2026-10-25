@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans CJK JP',sans-serif" font-size="13">
+  <!-- 作業の流れ：素材＋設定 → mkscene／mkanim → .pan → 実機・エミュレータ -->
+  <rect width="760" height="360" fill="#ffffff"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- 入力 -->
+  <rect x="16" y="50" width="160" height="70" rx="8" fill="#fff4e0" stroke="#e0a040"/>
+  <text x="96" y="76" text-anchor="middle" font-weight="bold">素材</text>
+  <text x="96" y="96" text-anchor="middle" font-size="12">PNG 連番・動画</text>
+  <text x="96" y="112" text-anchor="middle" font-size="12">音（WAV・MP3 など）</text>
+
+  <rect x="16" y="150" width="160" height="70" rx="8" fill="#fff4e0" stroke="#e0a040"/>
+  <text x="96" y="176" text-anchor="middle" font-weight="bold">設定</text>
+  <text x="96" y="196" text-anchor="middle" font-size="12">設定ファイル（.toml）</text>
+  <text x="96" y="212" text-anchor="middle" font-size="12">か、オプション</text>
+
+  <line x1="176" y1="85" x2="214" y2="120" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="176" y1="185" x2="214" y2="150" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ツールの中 -->
+  <rect x="216" y="16" width="270" height="246" rx="10" fill="#eef3fb" stroke="#4a7bd0" stroke-width="1.5"/>
+  <text x="351" y="38" text-anchor="middle" font-weight="bold" font-family="Consolas,'Courier New',monospace">pt mkscene ／ pt mkanim</text>
+  <g fill="#ffffff" stroke="#9bbbec">
+    <rect x="232" y="50" width="238" height="32" rx="5"/>
+    <rect x="232" y="90" width="238" height="32" rx="5"/>
+    <rect x="232" y="130" width="238" height="32" rx="5"/>
+    <rect x="232" y="170" width="238" height="32" rx="5"/>
+    <rect x="232" y="210" width="238" height="32" rx="5"/>
+  </g>
+  <g fill="#222">
+    <text x="244" y="71">1  画像を読み込んで減色する</text>
+    <text x="244" y="111">2  セル・パレット・ADPCM を作る</text>
+    <text x="244" y="151">3  描画時間を見積もり、描く順を決める</text>
+    <text x="244" y="191">4  スケジュール（.s）を書く</text>
+    <text x="244" y="231">5  HAS／HLK でビルド（run68）</text>
+  </g>
+
+  <!-- 出力 -->
+  <line x1="486" y1="139" x2="528" y2="139" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="530" y="112" width="80" height="54" rx="8" fill="#e6f4e6" stroke="#4a9a4a" stroke-width="1.5"/>
+  <text x="570" y="144" text-anchor="middle" font-weight="bold">.pan</text>
+  <line x1="610" y1="139" x2="624" y2="139" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="626" y="104" width="126" height="70" rx="8" fill="#f3f3f3" stroke="#888"/>
+  <text x="689" y="130" text-anchor="middle" font-weight="bold">実機・エミュレータ</text>
+  <text x="689" y="150" text-anchor="middle" font-size="12">panic で再生</text>
+
+  <!-- 寄り道：sim -->
+  <line x1="570" y1="166" x2="570" y2="206" stroke="#888" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <rect x="510" y="208" width="238" height="54" rx="8" fill="#ffffff" stroke="#888" stroke-dasharray="5 4"/>
+  <text x="522" y="230" font-size="12"><tspan font-weight="bold">--sim</tspan> を付けたとき</text>
+  <text x="522" y="248" font-size="12">pansim で再生時間と画面を PC で確かめる</text>
+
+  <!-- 寄り道：stop-at-s -->
+  <line x1="351" y1="262" x2="351" y2="290" stroke="#888" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <rect x="216" y="292" width="270" height="56" rx="8" fill="#ffffff" stroke="#888" stroke-dasharray="5 4"/>
+  <text x="228" y="314" font-size="12"><tspan font-weight="bold">--stop-at-s</tspan> を付けたとき：4 で止まる</text>
+  <text x="228" y="334" font-size="12">.s を手で直し、pt panbuild で 5 から続ける</text>
+  <path d="M216,320 C196,320 196,226 229,226" fill="none" stroke="#888" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a)"/>
+</svg>

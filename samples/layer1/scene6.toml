@@ -1,0 +1,47 @@
+# mkscene.py の設定ファイルの例：順番（sequence）と表示時間（hold）の指定
+# （python tools/mkscene.py samples/layer1/scene6.toml）
+#
+# 画像の番号は、層のフォルダの PNG を名前順に並べて 0 から。
+# sequence の書き方（カンマ区切り）：
+#   n       画像 n
+#   a-b     a から b まで（b < a なら逆順）
+#   :x      表示時間を既定のコマ（1/fps 秒）の x 倍。"0.5s" のように s を付けると秒
+#   *k      k 回くり返す。かっこでまとめられる："(0-3)*4"
+# hold：画像ごとの表示時間の既定（sequence の :x の方が優先）。{ "5" = 3 } または "5:3,7:0.5s"
+# 同じ画像を何度使っても、絵のデータ（セル）は 1 つで済む（差分なら描き直しも小さい）。
+
+name = "lay6"
+clock = "10mhz"
+loops = 1
+diff = true
+timelog = true
+
+[[layer]]
+name = "chara"
+plane = "g0"
+src = "chara"
+base = true
+fps = 12
+sequence = "0-11,11:5,10-0"   # 回って、11 で止まり（合わせて 6 コマ分）、逆に戻る
+hold = { "0" = 6 }            # 画像 0 は 6 コマ分（最初と最後）
+
+[[layer]]
+name = "bg"
+plane = "g1"
+src = "bg"
+loop_ratio = 1.0
+sequence = "0-7,(0-1)*2"      # 0〜7 のあと 0、1 を 2 回
+
+[[layer]]
+name = "text"
+plane = "text"
+src = "text"
+loop_ratio = 1.0
+hold = "2:3"                  # 画像 2 だけ 3 倍の長さ
+
+[[layer]]
+name = "bat"
+plane = "sprite"
+src = "spr2"
+fps = 8
+sequence = "0-3,2-1"          # 羽ばたきを往復で

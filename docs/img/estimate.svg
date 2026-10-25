@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" width="760" height="420" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans CJK JP',sans-serif" font-size="13">
+  <!-- 自動のツール（mkanim・mkscene）は、作るときに clock から描く時間を見積もり、待ちごとの空き時間を計算して、分割と .s を決める -->
+  <rect width="760" height="420" fill="#ffffff"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <pattern id="free" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" fill="#ffffff"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9bbbec" stroke-width="2"/>
+    </pattern>
+  </defs>
+
+  <!-- 作るとき -->
+  <rect x="8" y="8" width="744" height="300" rx="10" fill="#f6f9fe" stroke="#9bbbec"/>
+  <text x="20" y="30" font-weight="bold" fill="#2a5aa8">作るとき（PC の上で、ツールが前もって全部決める）</text>
+
+  <!-- 段 1：見積もり -->
+  <rect x="20" y="44" width="150" height="56" rx="7" fill="#fff4e0" stroke="#e0a040"/>
+  <text x="95" y="68" text-anchor="middle" font-weight="bold" font-family="Consolas,'Courier New',monospace">clock = 10</text>
+  <text x="95" y="88" text-anchor="middle" font-size="12">対象機の MPU の速さ</text>
+  <line x1="170" y1="72" x2="196" y2="72" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="198" y="44" width="210" height="56" rx="7" fill="#ffffff" stroke="#888"/>
+  <text x="303" y="68" text-anchor="middle" font-weight="bold">描く時間のモデル</text>
+  <text x="303" y="88" text-anchor="middle" font-size="12">エミュレータで測った係数</text>
+  <line x1="408" y1="72" x2="434" y2="72" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="436" y="44" width="304" height="56" rx="7" fill="#ffffff" stroke="#888"/>
+  <text x="588" y="68" text-anchor="middle" font-weight="bold">セル・命令ごとの時間の見積もり</text>
+  <text x="588" y="88" text-anchor="middle" font-size="12">例：セル 1 ＝ 8.5ms、キーを見る命令 ＝ 0.65ms…</text>
+  <line x1="588" y1="100" x2="588" y2="124" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- 段 2：時間の流れをなぞる -->
+  <rect x="20" y="126" width="720" height="104" rx="7" fill="#ffffff" stroke="#888"/>
+  <text x="32" y="146" font-weight="bold">時間の流れをなぞって、待ちごとの空き時間に描くものを入れていく</text>
+  <g font-size="11" fill="#555">
+    <text x="40" y="166">待ち 1（18.03ms。見積もりの誤差に備えて 95% まで）</text>
+    <text x="390" y="166">待ち 2</text>
+  </g>
+  <!-- 待ち 1：x=40〜340（18.03ms＝300px、1ms＝16.64px） -->
+  <rect x="40" y="172" width="300" height="30" fill="#f4f4f4" stroke="#bbb"/>
+  <rect x="40" y="172" width="11.6" height="30" fill="#999"/>
+  <rect x="51.6" y="172" width="141.4" height="30" fill="#4a7bd0" stroke="#fff"/>
+  <rect x="193" y="172" width="126.5" height="30" fill="#e08a00" stroke="#fff"/>
+  <rect x="319.5" y="172" width="5.3" height="30" fill="url(#free)"/>
+  <!-- 待ち 2：x=390〜690 -->
+  <rect x="390" y="172" width="300" height="30" fill="#f4f4f4" stroke="#bbb"/>
+  <rect x="390" y="172" width="11.6" height="30" fill="#999"/>
+  <rect x="401.6" y="172" width="139.8" height="30" fill="#4a9a4a" stroke="#fff"/>
+  <rect x="541.4" y="172" width="133.4" height="30" fill="url(#free)" stroke="#9bbbec"/>
+  <g stroke="#c0392b" stroke-width="1.5" stroke-dasharray="4 3">
+    <line x1="324.8" y1="168" x2="324.8" y2="206"/><line x1="674.8" y1="168" x2="674.8" y2="206"/>
+  </g>
+  <g font-size="12" fill="#fff" text-anchor="middle">
+    <text x="122" y="192">セル 1</text><text x="256" y="192">セル 2</text><text x="471" y="192">セル 3</text>
+  </g>
+  <text x="608" y="192" font-size="12" fill="#2a5aa8" text-anchor="middle" font-weight="bold">空き時間</text>
+  <g font-size="11" fill="#555">
+    <text x="40" y="220">灰色：切り替えの直後の命令（キーを見る、SPON など）の時間</text>
+    <text x="400" y="220">空き時間には、次のコマを前もって描く</text>
+  </g>
+  <line x1="380" y1="230" x2="380" y2="250" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- 段 3：決めること -->
+  <rect x="20" y="252" width="470" height="46" rx="7" fill="#ffffff" stroke="#888"/>
+  <text x="32" y="271" font-size="12"><tspan font-weight="bold">決めること</tspan>：符号化の形（速く描ける形にするか）、セルの区切り、</text>
+  <text x="32" y="289" font-size="12">どの待ちで描くか、分けて描くか、間に合わないコマを飛ばすか</text>
+  <line x1="490" y1="275" x2="516" y2="275" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="518" y="252" width="222" height="46" rx="7" fill="#e6f4e6" stroke="#4a9a4a" stroke-width="1.5"/>
+  <text x="629" y="271" text-anchor="middle" font-size="12" font-weight="bold">.s（DRW と VWAIT の並び）</text>
+  <text x="629" y="289" text-anchor="middle" font-size="12">＋セル → .pan</text>
+
+  <!-- 再生するとき -->
+  <line x1="629" y1="298" x2="629" y2="330" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="8" y="332" width="744" height="80" rx="10" fill="#f7f7f7" stroke="#bbb"/>
+  <text x="20" y="354" font-weight="bold" fill="#444">再生するとき（X68000 の panic）</text>
+  <text x="20" y="376" font-size="12">.s に並んだ順に DRW と VWAIT を実行するだけ。その場で絵を分けたり、時間を測って順番を変えたりはしない。</text>
+  <text x="20" y="398" font-size="12" fill="#c0392b">実際の機械が clock より遅いと、描くのに見積もりより時間がかかり、待ちに収まらずに遅れる（処理落ち）。</text>
+</svg>

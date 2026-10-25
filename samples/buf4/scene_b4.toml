@@ -1,0 +1,23 @@
+# scene.toml（lay1）を 4 面（buffers = 4）にしたもの。2 面では bg のコマを半分飛ばしていた
+# mkscene.py の設定ファイルの例（python tools/mkscene.py samples/layer1/scene.toml）
+# 背景（g1、8 枚）がキャラ（g0、12 枚）の 1 ループの間に 2 ループする。
+
+name = "b4lay1"
+buffers = 4
+clock = "10mhz"
+loops = 2          # 基準の層（chara）を 2 ループ
+diff = true
+timelog = true
+
+[[layer]]
+name = "chara"
+plane = "g0"       # 手前。PNG の透明な所は奥が見える
+src = "../layer1/chara"
+base = true
+fps = 12           # 12 枚で 1 秒
+
+[[layer]]
+name = "bg"
+plane = "g1"       # 奥
+src = "../layer1/bg"
+loop_ratio = 0.5   # 1 ループ＝キャラの 1 ループの半分（キャラ 1 ループの間に背景は 2 ループ）

@@ -1,0 +1,76 @@
+{
+ "_説明": "setup.py が自動でダウンロードするもの。url から取り、sha256 を確かめてから files の中身を to の場所に置く（to はこのリポジトリの一番上からの相対）。from の「書庫!中のファイル」は、書庫の中の書庫から取り出す（LZH だけ）。版を上げるときは url・sha256・size を書き換える。",
+ "deps": [
+  {
+   "name": "ffmpeg",
+   "what": "動画の切り出し、音声の読み込み（ffmpeg 9.0.2 essentials、Gyan Doshi のビルド）",
+   "license": "GPL v3（https://www.gyan.dev/ffmpeg/builds/）",
+   "url": "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip",
+   "sha256": "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba",
+   "size": 114768076,
+   "kind": "zip",
+   "files": [{"from": "ffmpeg-9.0.2-essentials_build/bin/ffmpeg.exe", "to": "runtime/ffmpeg/ffmpeg.exe"},
+             {"from": "ffmpeg-9.0.2-essentials_build/LICENSE", "to": "runtime/ffmpeg/LICENSE"}]
+  },
+  {
+   "name": "run68x",
+   "what": "X68000 の .x を Windows で動かす（HAS060X／HLK を動かすのに使う）",
+   "license": "GPL v2（https://github.com/kg68k/run68x）",
+   "url": "https://github.com/kg68k/run68x/releases/download/v2.3.2/run68x-v2.3.2-win-x64.zip",
+   "sha256": "96a92c4e17767abb0e6cf55f4027410c01365bdcebf8ac26ad07c0ab72eb833e",
+   "size": 68342,
+   "kind": "zip",
+   "files": [{"from": "run68.exe", "to": "runtime/run68/run68.exe"}]
+  },
+  {
+   "name": "HAS060X",
+   "what": "X68000 のアセンブラ（HAS v3.09 互換。.s → .o）",
+   "license": "HAS060.X の配布規定に準じる（https://github.com/kg68k/has060xx）",
+   "url": "https://github.com/kg68k/has060xx/releases/download/v2.0.3/hasx203.zip",
+   "sha256": "3012fd7f8ae4f1c5fc2c5b08d5830ba338faf886c4ce56af559af33de8a15be7",
+   "size": 47299,
+   "kind": "zip",
+   "files": [{"from": "has060x.x", "to": "x68/bin/has060x.x"}, {"from": "README.txt", "to": "x68/bin/has060x_README.txt"}]
+  },
+  {
+   "name": "HLK evolution",
+   "what": "X68000 のリンカ（HLK v3.01 互換。.o → .x）",
+   "license": "転載可（https://github.com/kg68k/hlk-ev）",
+   "url": "https://github.com/kg68k/hlk-ev/releases/download/v3.01%2B18/hlkev18.zip",
+   "sha256": "75d64b34c20875b79481c32f5001da21a4be4f5c0109d3f5878eae5293cd0e64",
+   "size": 24986,
+   "kind": "zip",
+   "files": [{"from": "hlk.r", "to": "x68/bin/hlk.r"}, {"from": "hlkev.txt", "to": "x68/bin/hlkev.txt"}]
+  },
+  {
+   "name": "panic",
+   "what": "panic.x V1.38.01（再生器）、sch.h（スケジュールのマクロ）、bpica.x（当時のエンコーダ）、付属ドキュメント（docs/panic/）",
+   "license": "利用・配布・改造自由（原作者 永田英哉（pako）さんの宣言。http://retropc.net/x68000/software/movie/panic/panic/）",
+   "url": "http://retropc.net/x68000/software/movie/panic/panic/PAN13801.LZH",
+   "sha256": "5114d71b2548800e8463b5d63660483abae9795482143e140325f8f74da450a2",
+   "size": 27393,
+   "kind": "lzh",
+   "files": [{"from": "panic.x", "to": "x68/panic.x"}, {"from": "sch.h", "to": "x68/sch.h"},
+             {"from": "bpica.x", "to": "x68/bpica.x"},
+             {"from": "readme.doc", "to": "docs/panic/readme.doc"}, {"from": "panic.1", "to": "docs/panic/panic.1"},
+             {"from": "panic.his", "to": "docs/panic/panic.his"}, {"from": "pantime.txt", "to": "docs/panic/pantime.txt"},
+             {"from": "pan13801.hed", "to": "docs/panic/pan13801.hed"},
+             {"from": "pakodocs.Lzh!panic.doc", "to": "docs/panic/panic.doc"},
+             {"from": "pakodocs.Lzh!update.doc", "to": "docs/panic/update.doc"},
+             {"from": "pakodocs.Lzh!a_enc.doc", "to": "docs/panic/a_enc.doc"},
+             {"from": "pakodocs.Lzh!bpica.doc", "to": "docs/panic/bpica.doc"}]
+  }
+ ],
+ "samples": [
+  {
+   "name": "Big Buck Bunny 10 秒",
+   "what": "実写に近い動画のサンプル（samples/bbb/bbb.toml で使う）",
+   "license": "CC BY 3.0（(c) Blender Foundation / www.bigbuckbunny.org）",
+   "url": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
+   "sha256": null,
+   "size": null,
+   "kind": "file",
+   "files": [{"from": null, "to": "samples/bbb/bbb10s.mp4"}]
+  }
+ ]
+}

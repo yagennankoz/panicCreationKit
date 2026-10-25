@@ -1,0 +1,14 @@
+# 4 面（buffers = 4）の確認：数字 1〜4 の 4 枚を、G0 の 512x512 の 4 か所に最初に描いておき、あとはスクロールだけで切り替える
+# （python tools/mkscene.py samples/buf4/quad.toml）
+name = "quad"
+clock = "10mhz"
+buffers = 4
+loops = 2              # 1〜4 を 2 回（4 秒）
+timelog = true
+
+[[layer]]
+name = "num"
+plane = "g0"
+src = "quad"
+base = true
+fps = 2

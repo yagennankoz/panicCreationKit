@@ -1,0 +1,41 @@
+# 永久ループ＋キーで終了の例（python tools/mkscene.py samples/layer1/forever.toml）
+# scene4.toml の 5 層を、キーが押されるまでくり返す。
+# 永久ループでは、1 周（基準の層 × loops）の中で各層がちょうど整数回ループするように loop_ratio／fps を決める。
+
+name = "forev"
+clock = "10mhz"
+loops = 2            # 1 周＝基準の層（chara：12 枚・12fps＝1 ループ 1 秒）の 2 ループ＝2 秒
+loop = "forever"     # キーが押されるまでくり返す（ESC でも終わる）
+exit_key = "any"     # どのキーでも終わる（space／return／none も可）
+diff = true
+
+[[layer]]
+name = "chara"
+plane = "g0"
+src = "chara"
+base = true
+fps = 12
+
+[[layer]]
+name = "bg"
+plane = "g1"
+src = "bg"
+loop_ratio = 2.0     # bg の 1 ループ＝chara の 1 ループ（1 秒）× 2＝2 秒 → 1 周（2 秒）に 1 ループ
+
+[[layer]]
+name = "text"
+plane = "text"
+src = "text"
+loop_ratio = 1.0     # text の 1 ループ＝chara と同じ 1 秒 → 1 周に 2 ループ
+
+[[layer]]
+name = "star"
+plane = "sprite"
+src = "spr1"
+loop_ratio = 1.0
+
+[[layer]]
+name = "bat"
+plane = "sprite"
+src = "spr2"
+fps = 8              # 0.5 秒で 1 ループ → 1 周に 4 ループ

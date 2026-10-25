@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans CJK JP',sans-serif" font-size="13">
+  <!-- 1 枚の絵をセルに分ける（fixed_cels）：上から行を足していき、描く時間が約 8.6ms になった所で区切る。数字は例 -->
+  <rect width="760" height="330" fill="#ffffff"/>
+  <defs>
+    <pattern id="detail" width="12" height="12" patternUnits="userSpaceOnUse">
+      <rect width="12" height="12" fill="#f6d365"/>
+      <rect width="6" height="6" fill="#e07a5f"/><rect x="6" y="6" width="6" height="6" fill="#3d405b"/>
+      <circle cx="9" cy="3" r="2" fill="#81b29a"/><circle cx="3" cy="9" r="2" fill="#ffffff"/>
+    </pattern>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9cc9f0"/><stop offset="1" stop-color="#d8ecfb"/>
+    </linearGradient>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- 左：絵（256x256 を 240px で。1 行＝0.9375px、行 r の y＝50＋r×0.9375） -->
+  <text x="20" y="28" font-weight="bold">1 枚の絵（256x256）を、行の帯に分ける</text>
+  <rect x="40" y="50" width="240" height="65.6" fill="url(#sky)"/>
+  <rect x="40" y="115.6" width="240" height="91.9" fill="url(#detail)"/>
+  <rect x="40" y="207.5" width="240" height="82.5" fill="#7cb87c"/>
+  <g stroke="#6aa86a" stroke-width="2"><line x1="40" y1="225" x2="280" y2="225"/><line x1="40" y1="250" x2="280" y2="250"/><line x1="40" y1="272" x2="280" y2="272"/></g>
+  <rect x="40" y="50" width="240" height="240" fill="none" stroke="#444"/>
+  <!-- 区切り -->
+  <g stroke="#c0392b" stroke-width="2" stroke-dasharray="6 3">
+    <line x1="32" y1="115.6" x2="288" y2="115.6"/><line x1="32" y1="143.75" x2="288" y2="143.75"/>
+    <line x1="32" y1="164.4" x2="288" y2="164.4"/><line x1="32" y1="185" x2="288" y2="185"/>
+    <line x1="32" y1="207.5" x2="288" y2="207.5"/>
+  </g>
+  <!-- 帯の色（右の時間の図と同じ色） -->
+  <rect x="24" y="50" width="12" height="65.6" fill="#4a7bd0"/>
+  <rect x="24" y="115.6" width="12" height="28.15" fill="#e08a00"/>
+  <rect x="24" y="143.75" width="12" height="20.65" fill="#4a9a4a"/>
+  <rect x="24" y="164.4" width="12" height="20.6" fill="#9b59b6"/>
+  <rect x="24" y="185" width="12" height="22.5" fill="#c0392b"/>
+  <rect x="24" y="207.5" width="12" height="82.5" fill="#16a085"/>
+
+  <!-- 帯の説明 -->
+  <g font-size="12" fill="#222">
+    <text x="296" y="87">セル 1　行 0〜69　　8.5ms</text>
+    <text x="296" y="134">セル 2　行 70〜99　 8.6ms</text>
+    <text x="296" y="158">セル 3　行 100〜121 8.5ms</text>
+    <text x="296" y="179">セル 4　行 122〜143 8.4ms</text>
+    <text x="296" y="200">セル 5　行 144〜167 8.6ms</text>
+    <text x="296" y="253">セル 6　行 168〜255 6.0ms</text>
+  </g>
+  <g font-size="11" fill="#777">
+    <text x="296" y="103">単純な行は速い → 厚い帯</text>
+    <text x="296" y="269">同じ行のくり返しは速い</text>
+  </g>
+  <text x="296" y="222" font-size="11" fill="#777">細かい行は遅い → 薄い帯</text>
+  <line x1="294" y1="218" x2="290" y2="176" stroke="#aaa"/>
+
+  <!-- 右：待ちごとに描く -->
+  <text x="490" y="28" font-weight="bold">待ちごとに、入るだけのセルを描く</text>
+  <text x="490" y="44" font-size="11" fill="#666">棒の長さ＝待ち 1 カウント（18.03ms）。</text>
+  <text x="490" y="58" font-size="11" fill="#666">見積もりの誤差に備えて、破線（95%）までに入れる</text>
+  <g font-size="12" fill="#444">
+    <text x="490" y="72">1 回目の待ち</text><text x="490" y="128">2 回目の待ち</text><text x="490" y="184">3 回目の待ち</text>
+  </g>
+  <g stroke="#bbb" fill="#f4f4f4">
+    <rect x="500" y="78" width="230" height="28"/><rect x="500" y="134" width="230" height="28"/><rect x="500" y="190" width="230" height="28"/>
+  </g>
+  <g stroke="#fff">
+    <rect x="500" y="78" width="108.5" height="28" fill="#4a7bd0"/><rect x="608.5" y="78" width="109.7" height="28" fill="#e08a00"/>
+    <rect x="500" y="134" width="108.5" height="28" fill="#4a9a4a"/><rect x="608.5" y="134" width="107.2" height="28" fill="#9b59b6"/>
+    <rect x="500" y="190" width="109.7" height="28" fill="#c0392b"/><rect x="609.7" y="190" width="76.6" height="28" fill="#16a085"/>
+  </g>
+  <g fill="#fff" font-size="12" text-anchor="middle">
+    <text x="554" y="97">セル 1</text><text x="663" y="97">セル 2</text>
+    <text x="554" y="153">セル 3</text><text x="662" y="153">セル 4</text>
+    <text x="555" y="209">セル 5</text><text x="648" y="209">セル 6</text>
+  </g>
+  <g stroke="#c0392b" stroke-width="1.5" stroke-dasharray="4 3">
+    <line x1="718.6" y1="74" x2="718.6" y2="110"/><line x1="718.6" y1="130" x2="718.6" y2="166"/><line x1="718.6" y1="186" x2="718.6" y2="222"/>
+  </g>
+  <line x1="615" y1="226" x2="615" y2="252" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="490" y="270" font-size="12" fill="#222">描き終わったら、スクロールで切り替える</text>
+  <text x="490" y="288" font-size="11" fill="#666">（描いている間は、見えていない入れ物の中）</text>
+
+  <text x="20" y="318" font-size="11" fill="#666">数字は例。区切りは絵（差分なら、描く先にある絵も）だけで決まるので、同じ絵はどの周でも同じセルになる（fixed_cels = true）。</text>
+</svg>

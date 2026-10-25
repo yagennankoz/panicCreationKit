@@ -1,0 +1,48 @@
+# ビルド中間ファイル
+*.o
+x68/test/*.x
+
+# Python
+__pycache__/
+*.pyc
+
+# エディタ・OS
+.vscode/
+Thumbs.db
+
+# 生成物（tools/make_ref_images.py で再生成できる）
+x68/ref/*.raw
+
+# 生成物（tools/mkanim.py・make_test_anim.py で再生成できる）
+x68/anim/
+samples/anim*/
+x68/**/*.x
+!x68/*.x
+!x68/bin/*.x
+
+# XM6 の WAV キャプチャ（大きいので管理外）
+x68/test/*.wav
+samples/test_video.mp4
+samples/bbb/*.mp4
+samples/layer1/bg/
+samples/layer1/chara/
+samples/layer1/text/
+samples/layer1/spr1/
+samples/layer1/spr2/
+samples/layer1/bgt0/
+samples/layer1/bgt1/
+
+# ビルドの作業フォルダ（buildPan.py）
+x68/work/
+
+# setup.bat（tools/setup/setup.py）が自動でダウンロードして置くもの（リポジトリには入れない）
+runtime/
+x68/bin/
+x68/panic.x
+x68/sch.h
+x68/bpica.x
+x68/bpic.x
+samples/bbb/*.mp4
+
+# setup.bat が置く panic の付属ドキュメント（PAN13801.LZH から）
+docs/panic/
