@@ -1,7 +1,7 @@
 r"""mkanim.py : PNG 連番または動画 1 本から panic の .pan を作る（1 枚の層だけの mkscene）
 
-使い方:  python mkanim.py <PNGフォルダ|動画ファイル> <名前> [オプション]
-        python mkanim.py --config 設定.toml [オプション]   （設定ファイルの例：samples/bbb/bbb.toml。キーはオプション名）
+使い方:  pt mkanim <PNGフォルダ|動画ファイル> <名前> [オプション]
+        pt mkanim --config 設定.toml [オプション]   （設定ファイルの例：samples/bbb/bbb.toml。キーはオプション名）
 
   <名前>     出力名（Human68k の 8.3 形式を考えて英数字 8 文字以内）。<出力先>/<名前>.pan ができる
   --out      出力先のフォルダ（省略すると x68/anim/<名前>/）

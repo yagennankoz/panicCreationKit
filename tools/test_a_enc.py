@@ -1,6 +1,6 @@
 """test_a_enc.py : a_enc.py が bpica.x の正解データと一致するかを確かめる
 
-使い方:  python tools/test_a_enc.py
+使い方:  pt test_a_enc
   samples/reference/rN.cel / rN.pal（bpica.x の出力）がある画像すべてについて、
   1) デコード結果が元画像（x68/ref/rN.raw）と一致する
   2) エンコード結果（セル・パレット）がバイト単位で一致する

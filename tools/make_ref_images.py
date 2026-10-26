@@ -1,6 +1,6 @@
 """make_ref_images.py : bpica.x の正解データ作り用のテスト画像を作る
 
-使い方:  python make_ref_images.py
+使い方:  pt make_ref_images
 
 出力:
   samples/reference/src/rN.png  … 確認用の PNG（X68000 の色に丸めた後の色）

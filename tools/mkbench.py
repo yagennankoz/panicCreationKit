@@ -1,6 +1,6 @@
 r"""mkbench.py : ベンチ動画（描画の速さを数える .pan）を設定ファイルから作る
 
-使い方:  python mkbench.py <設定.toml> [--out フォルダ] [--stop-at-s]
+使い方:  pt mkbench <設定.toml> [--out フォルダ] [--stop-at-s]
   例：samples/bench/bench.toml
 
 流れ（できる .pan の動き）:

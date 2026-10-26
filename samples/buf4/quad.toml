@@ -1,5 +1,5 @@
 # 4 面（buffers = 4）の確認：数字 1〜4 の 4 枚を、G0 の 512x512 の 4 か所に最初に描いておき、あとはスクロールだけで切り替える
-# （python tools/mkscene.py samples/buf4/quad.toml）
+# （pt mkscene samples/buf4/quad.toml）
 name = "quad"
 clock = "10mhz"
 buffers = 4

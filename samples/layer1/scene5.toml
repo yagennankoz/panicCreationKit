@@ -1,4 +1,4 @@
-# BG 面と重なり順の例（python tools/mkscene.py samples/layer1/scene5.toml）
+# BG 面と重なり順の例（pt mkscene samples/layer1/scene5.toml）
 #   BG1＝空（横縞）、BG0＝レンガの壁と点滅する窓、スプライト＝横切る星、G0＝回る顔。
 #   order で「グラフィックを手前」にしているので、顔は BG やスプライトより手前に出る。
 

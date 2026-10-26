@@ -118,7 +118,7 @@ def make_samples():
     """テストアニメの PNG（git に入れていない）を作る"""
     py = sys.executable
     for args in (["samples/anim2", "32", "--static"], ["samples/anim1", "32"], ["--layers"]):
-        print(f"  python tools/make_test_anim.py {' '.join(args)}")
+        print(f"  pt make_test_anim {' '.join(args)}")
         subprocess.run([py, str(ROOT / "tools" / "make_test_anim.py"), *args], cwd=ROOT, check=True)
 
 

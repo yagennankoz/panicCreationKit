@@ -9,5 +9,5 @@
 作り方の例：
 
 ```
-python tools/mkanim.py samples/bbb/bbb10s.mp4 bbb12 --fps 12 --diff --stabilize 24 --timelog
+pt mkanim samples/bbb/bbb10s.mp4 bbb12 --fps 12 --diff --stabilize 24 --timelog
 ```

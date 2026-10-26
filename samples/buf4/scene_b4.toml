@@ -1,5 +1,5 @@
 # scene.toml（lay1）を 4 面（buffers = 4）にしたもの。2 面では bg のコマを半分飛ばしていた
-# mkscene.py の設定ファイルの例（python tools/mkscene.py samples/layer1/scene.toml）
+# mkscene.py の設定ファイルの例（pt mkscene samples/layer1/scene.toml）
 # 背景（g1、8 枚）がキャラ（g0、12 枚）の 1 ループの間に 2 ループする。
 
 name = "b4lay1"

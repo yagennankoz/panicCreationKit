@@ -38,9 +38,18 @@ Windows 上の素材（PNG 連番・動画・音声）から、X68000 用アニ�
 
 - `setup.bat --samples` でサンプルの素材（テストアニメの PNG、Big Buck Bunny 10 秒）も用意します。
   Big Buck Bunny は `--samples` のときだけダウンロードします（CC BY 3.0。入手元とクレジットは README.md の表）。
-- ツールは `pt.bat` から動かします：`pt mkscene 設定.toml`（`pt` だけで一覧）。中身は runtime/python の Python で `tools/<名前>.py` を動かすだけです。
-- 自分の Python（3.11 以上）を使うときは `pip install -r requirements.txt` → `python tools/setup/setup.py`。
-  以下の説明の `python tools/〇〇.py` は `pt 〇〇` と同じです。
+- ツールは `pt.bat` から動かします：`pt mkscene 設定.toml`（`pt` だけで一覧）。このマニュアルのコマンドの例も、すべて `pt` の形で書いてあります。
+  `pt` は、setup.bat が用意した Python（`runtime\python\`）で `tools\<名前>.py` を動かします。
+
+> **自分の（インストール済みの）Python を使う場合の注意**
+>
+> - `python tools\mkanim.py …` のように `python` で直接動かすと、`runtime\python\` ではなく、パソコンにインストールしてある Python が使われます。
+>   `pt` も、`runtime\python\` が無いとき（setup.bat をまだ実行していないとき）は、インストールしてある Python を使います。
+> - その場合は、その Python（3.11 以上）に、ツールが使うパッケージ（Pillow、numpy）を入れておいてください：`pip install -r requirements.txt`。
+>   入っていないと、ツールはエラーで止まります。
+> - ffmpeg・run68x・アセンブラなどは、`python tools\setup\setup.py` で用意できます（setup.bat と同じ。Python は入れません）。
+> - `python tools\〇〇.py 引数…` は `pt 〇〇 引数…` と同じ動きです（使う Python だけが違います）。
+
 - 外部のプログラムの場所は、環境変数 `FFMPEG`、`RUN68`、`PANTOOL_HAS`、`PANTOOL_HLK` で変えられます（`tools/paths.py`）。
 - 再生の確認には、X68000 の実機かエミュレータが要ります（含みません）。エミュレータでは `x68/` を X68000 のドライブとして共有します
   （ホストのフォルダを共有する機能。WindrvXM など。以下の例では H: ドライブ）。実機へは .pan を写して使います。
@@ -64,7 +73,7 @@ docs/         このマニュアル、LIBRARY.md（ライブラリと VWAIT）�
   `x68/work` のパスが 60 文字を超えるときは `%LOCALAPPDATA%\pckwin\work` などを使います。
   それも長いときは、環境変数 `PANTOOL_WORK` に短いフォルダ（例 `C:\ptwork`）を指定してください。
 
-コマンドは `panicCreationKitForWin` のフォルダ（setup.bat のあるフォルダ）で実行します（例：`pt mkanim …`、または `python tools/mkanim.py …`）。
+コマンドは `panicCreationKitForWin` のフォルダ（setup.bat のあるフォルダ）で実行します（例：`pt mkanim …`）。
 
 ---
 
@@ -73,14 +82,14 @@ docs/         このマニュアル、LIBRARY.md（ライブラリと VWAIT）�
 サンプルの素材（PNG）は git には入っていないので、`setup.bat --samples` で用意するか、次のように作ります。
 
 ```
-python tools/make_test_anim.py samples/anim2 32 --static     # 回る円（背景は止まっている）32 コマ
-python tools/make_test_anim.py --layers                      # samples/layer1/ の層のサンプル（背景・キャラ・字幕・スプライトなど）
+pt make_test_anim samples/anim2 32 --static     # 回る円（背景は止まっている）32 コマ
+pt make_test_anim --layers                      # samples/layer1/ の層のサンプル（背景・キャラ・字幕・スプライトなど）
 ```
 
 ### PNG 連番 1 つから作る
 
 ```
-python tools/mkanim.py samples/anim2 test1 --fps 12 --diff
+pt mkanim samples/anim2 test1 --fps 12 --diff
 ```
 
 `x68/anim/test1/test1.pan` ができます。X68000 の上で（`x68/` を H: に共有しているとして）：
@@ -92,13 +101,13 @@ H:\>panic anim\test1\test1.pan
 ### 動画から作る（音も動画から取る）
 
 ```
-python tools/mkanim.py 動画.mp4 video1 --fps 12 --diff --start 10 --duration 5
+pt mkanim 動画.mp4 video1 --fps 12 --diff --start 10 --duration 5
 ```
 
 ### 層を重ねる（設定ファイル）
 
 ```
-python tools/mkscene.py samples/layer1/scene4.toml
+pt mkscene samples/layer1/scene4.toml
 ```
 
 サンプルの設定ファイル（`samples/layer1/*.toml`、`samples/buf4/*.toml`）に、項目の説明をコメントで書いてあります。
@@ -125,7 +134,7 @@ python tools/mkscene.py samples/layer1/scene4.toml
 
    大きさが違う画像は、縦横比を保って縮小し、中央の 256x256 を使います（`fit`）。
 2. **設定ファイルを書く**（mkscene）か、**オプションを並べる**（mkanim）。
-3. **作る**：`python tools/mkscene.py 設定.toml`。終わりに、描画が間に合うかの見積もりと警告が出ます（→ 11 章）。
+3. **作る**：`pt mkscene 設定.toml`。終わりに、描画が間に合うかの見積もりと警告が出ます（→ 11 章）。
 4. **確かめる**：必要なら `--sim` を付けて pansim で再生時間と画面を確認。
 5. **実機・エミュレータで見る**：`panic <出力先>\<名前>.pan`。`--timelog` で作ると、実際の再生時間が time.txt に書かれます。
 
@@ -134,7 +143,7 @@ python tools/mkscene.py samples/layer1/scene4.toml
 自動で作ったものを土台にして、少しだけ手を入れたいときの方法です。
 
 ```
-python tools/mkscene.py 設定.toml --stop-at-s      # 素材と .s を作って止める
+pt mkscene 設定.toml --stop-at-s      # 素材と .s を作って止める
 （<出力先>/<名前>.s を編集する。Shift-JIS・CRLF。最後の .include <名前>_d.h は消さない）
 pt buildPan <出力先>\<名前>.s                      # 続きから .pan を作る
 ```
@@ -172,7 +181,7 @@ H:\>panic anim\demo\demo.pan                                  ④ 実機・エ�
 ### 5.2 mkparts：素材とひな形を作る
 
 ```
-python tools/mkparts.py <画像・音声・画像のフォルダ…> --name 名前 [--make cel,pal,pcm,s] [オプション]
+pt mkparts <画像・音声・画像のフォルダ…> --name 名前 [--make cel,pal,pcm,s] [オプション]
 ```
 
 画像（png、bmp、jpg、gif など）、音声（wav、mp3、ogg、flac など）、画像の入ったフォルダ（名前順）を、いくつでも並べられます。
@@ -372,7 +381,7 @@ pt mkparts jimaku.png --name demot --out x68\anim\demo --plane text --make cel,p
 ### 5.7 buildPan：.pan を作る
 
 ```
-python tools/buildPan.py <名前>.s [--sim] [--clock 10]
+pt buildPan <名前>.s [--sim] [--clock 10]
 ```
 
 - .s と同じフォルダに `<名前>.json` があると、次のことをします。
@@ -403,8 +412,8 @@ python tools/buildPan.py <名前>.s [--sim] [--clock 10]
 ## 6. mkanim.py（重ね合わせの無いアニメーションを 1 コマンドで）
 
 ```
-python tools/mkanim.py <PNG のフォルダ | 動画> <名前> [オプション]
-python tools/mkanim.py --config 設定.toml [オプション]
+pt mkanim <PNG のフォルダ | 動画> <名前> [オプション]
+pt mkanim --config 設定.toml [オプション]
 ```
 
 `--config` の設定ファイルには、オプション名（`-` は `_` でもよい）を書きます。例：`samples/bbb/bbb.toml`。
@@ -451,7 +460,7 @@ python tools/mkanim.py --config 設定.toml [オプション]
 ## 7. mkscene.py（層を重ねたアニメーションを 1 コマンドで）
 
 ```
-python tools/mkscene.py <設定.toml> [--out フォルダ] [--stop-at-s] [--sim]
+pt mkscene <設定.toml> [--out フォルダ] [--stop-at-s] [--sim]
 ```
 
 設定ファイルは「全体の項目」と、`[[layer]]` を並べた「層の項目」からできています。書き間違えた項目や、
@@ -749,7 +758,7 @@ hold はその画像が出てくる所すべてに効きます（sequence の `:
 描画の速さを数える .pan を作ります。
 
 ```
-python tools/mkbench.py <設定.toml> [--out フォルダ] [--stop-at-s]
+pt mkbench <設定.toml> [--out フォルダ] [--stop-at-s]
 ```
 
 できる .pan の動き：導入部分を再生 → キー待ち → ベンチ部分を**待たずに**描いては切り替えることをくり返す
@@ -808,7 +817,7 @@ PCMP（音を止めて鳴らし直す。0.1〜2.4ms）、カウントと時間�
 ## 9. 確かめる（pansim）
 
 ```
-python tools/pansim.py <file.pan> [--gif out.gif] [--png フォルダ] [--seconds 秒] [--clock 10mhz]
+pt pansim <file.pan> [--gif out.gif] [--png フォルダ] [--seconds 秒] [--clock 10mhz]
 ```
 
 - .pan の命令を PC 上で計算して、再生時間・処理落ち（遅れた待ち）・画面を調べます。実機の画面に再生するものではありません。
@@ -822,16 +831,16 @@ python tools/pansim.py <file.pan> [--gif out.gif] [--png フォルダ] [--second
 
 | ツール                                                | 使い方                                                              | 用途                                                                                            |
 | ----------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `mkbench.py`                                          | `mkbench.py <設定.toml> [--out] [--stop-at-s]`                      | ベンチ動画を作る（7.9）                                                                         |
-| `mkparts.py`                                          | `mkparts.py <画像・音声…> --name 名前 [--make …]`                   | セル・パレット・ADPCM と .s のひな形を作る（5.2）                                               |
-| `buildPan.py`                                         | `buildPan.py <名前>.s [--sim] [--clock]`                            | .s から .pan を作る。素材の一覧（.json）があれば素材もつなげる（5.7）。panbuild.py も同じ |
-| `png2cel.py`                                          | `png2cel.py [-p] [-a] [-c] [-t 色] <in.png> <out.cel> <pal>`        | PNG → a_enc セル（bpica.x 互換）。`-p` でパレットを新しく作る                                   |
-| `adpcm.py`                                            | `adpcm.py enc <音> <out.pcm> [--gain dB]`／`dec <in.pcm> <out.wav>` | ADPCM（MSM6258、15.625kHz）への変換と確認                                                       |
-| `mkpan.py`                                            | `mkpan.py <in.x> [out.pan]`                                         | .x → .pan（mkpan.x 互換）                                                                       |
-| `predict_time.py`                                     | `predict_time.py <名前>`                                            | x68/anim/<名前> の再生時間の大まかな予測（pansim の方が正確）                                      |
+| `mkbench.py`                                          | `pt mkbench <設定.toml> [--out] [--stop-at-s]`                      | ベンチ動画を作る（7.9）                                                                         |
+| `mkparts.py`                                          | `pt mkparts <画像・音声…> --name 名前 [--make …]`                   | セル・パレット・ADPCM と .s のひな形を作る（5.2）                                               |
+| `buildPan.py`                                         | `pt buildPan <名前>.s [--sim] [--clock]`                            | .s から .pan を作る。素材の一覧（.json）があれば素材もつなげる（5.7）。panbuild.py も同じ |
+| `png2cel.py`                                          | `pt png2cel [-p] [-a] [-c] [-t 色] <in.png> <out.cel> <pal>`        | PNG → a_enc セル（bpica.x 互換）。`-p` でパレットを新しく作る                                   |
+| `adpcm.py`                                            | `pt adpcm enc <音> <out.pcm> [--gain dB]`／`pt adpcm dec <in.pcm> <out.wav>` | ADPCM（MSM6258、15.625kHz）への変換と確認                                                       |
+| `mkpan.py`                                            | `pt mkpan <in.x> [out.pan]`                                         | .x → .pan（mkpan.x 互換）                                                                       |
+| `predict_time.py`                                     | `pt predict_time <名前>`                                            | x68/anim/<名前> の再生時間の大まかな予測（pansim の方が正確）                                      |
 | `make_test_anim.py`                                   | —                                                                   | テスト用の素材を作る                                                                            |
-| `test_a_enc.py`                                       | `test_a_enc.py`                                                     | a_enc エンコーダが bpica.x の出力と一致するかの確認                                             |
-| `make_ref_images.py`                                  | `make_ref_images.py`                                                | 正解データ作り用のテスト画像を作る（10.1）                                                      |
+| `test_a_enc.py`                                       | `pt test_a_enc`                                                     | a_enc エンコーダが bpica.x の出力と一致するかの確認                                             |
+| `make_ref_images.py`                                  | `pt make_ref_images`                                                | 正解データ作り用のテスト画像を作る（10.1）                                                      |
 
 ### 10.1 セルの正解データ（make_ref_images・gload.x・test_a_enc）
 

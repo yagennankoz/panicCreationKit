@@ -1,4 +1,4 @@
-# mkscene.py の設定ファイルの例（python tools/mkscene.py samples/layer1/scene.toml）
+# mkscene.py の設定ファイルの例（pt mkscene samples/layer1/scene.toml）
 # 背景（g1、8 枚）はキャラ（g0、12 枚）が 2 ループする間に 1 ループ。
 
 name = "lay2"

@@ -1,6 +1,6 @@
 """mkpan.py : Human68k の .x 実行ファイルを panic の .pan に変換する（mkpan.x 互換）
 
-使い方:  python mkpan.py <in.x> [out.pan]
+使い方:  pt mkpan <in.x> [out.pan]
 
 .pan の構造（panic.x のローダーを逆アセンブルして確認、mkpan.x の出力と一致）:
   +0   'PANIC',$1A,0,0     sch.h が text 先頭に置く

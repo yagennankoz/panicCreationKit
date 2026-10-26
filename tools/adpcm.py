@@ -1,9 +1,9 @@
 """adpcm.py : X68000 の ADPCM（OKI MSM6258、4 ビット）のエンコーダ／デコーダ
 
 使い方:
-  python adpcm.py enc <入力（wav/mp3 など）> <出力.pcm> [--gain dB]
+  pt adpcm enc <入力（wav/mp3 など）> <出力.pcm> [--gain dB]
       ffmpeg で 15625Hz モノラルにしてから ADPCM にする（panic.x の PCMP は 15.625kHz 固定）
-  python adpcm.py dec <入力.pcm> <出力.wav>
+  pt adpcm dec <入力.pcm> <出力.wav>
       確認用に WAV に戻す
 
 形式（MAME の msm6258 と同じ方式）:

@@ -1,6 +1,6 @@
 """png2cel.py : 256x256 の画像から a_enc セルとパレットを作る（bpica.x 互換）
 
-使い方:  python png2cel.py [-p] [-a] <in.png> <out.cel> <pal>
+使い方:  pt png2cel [-p] [-a] <in.png> <out.cel> <pal>
 
   -p   パレットを新しく作る（付けなければ <pal> を読み込み、新しい色を後ろに追加して上書き）
        bpica.x と同じ動作。

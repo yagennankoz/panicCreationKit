@@ -1,6 +1,6 @@
 r"""panbuild.py : mkanim.py --stop-at-s で止めた（そして人が .s を編集した）フォルダから .pan を作る
 
-使い方:  python panbuild.py <フォルダ または <名前>.json> [--clock 10mhz] [--sim]
+使い方:  pt panbuild <フォルダ または <名前>.json> [--clock 10mhz] [--sim]
 
   --sim   できた .pan を pansim（PC 上のシミュレータ）で動かし、再生時間と処理落ちを表示する（既定はしない）
 

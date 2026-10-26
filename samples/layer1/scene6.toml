@@ -1,5 +1,5 @@
 # mkscene.py の設定ファイルの例：順番（sequence）と表示時間（hold）の指定
-# （python tools/mkscene.py samples/layer1/scene6.toml）
+# （pt mkscene samples/layer1/scene6.toml）
 #
 # 画像の番号は、層のフォルダの PNG を名前順に並べて 0 から。
 # sequence の書き方（カンマ区切り）：

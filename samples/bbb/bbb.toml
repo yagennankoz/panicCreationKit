@@ -1,4 +1,4 @@
-# mkanim.py の設定ファイルの例（python tools/mkanim.py --config samples/bbb/bbb.toml）
+# mkanim.py の設定ファイルの例（pt mkanim --config samples/bbb/bbb.toml）
 # キーは mkanim.py のオプション名（- は _ でもよい）。ファイル名はこの設定ファイルからの相対。
 # コマンドラインで同じオプションを指定すると、そちらが優先される。
 

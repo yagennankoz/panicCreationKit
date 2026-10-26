@@ -1,9 +1,9 @@
 """mkparts.py : 画像・音声から、セル（.cel）・パレット（.pal）・ADPCM（.pcm）と、.s のひな形を作る
 
-使い方:  python mkparts.py <画像・音声・画像のフォルダ…> --name 名前 [オプション]
-  例：python mkparts.py title.png bg.png se.wav --name demo
-      python mkparts.py frames/ voice.wav --name anim1 --fps 8 --build
-      python mkparts.py logo.png --name logo --make cel,pal          （.s は作らず、セルとパレットだけ）
+使い方:  pt mkparts <画像・音声・画像のフォルダ…> --name 名前 [オプション]
+  例：pt mkparts title.png bg.png se.wav --name demo
+      pt mkparts frames/ voice.wav --name anim1 --fps 8 --build
+      pt mkparts logo.png --name logo --make cel,pal          （.s は作らず、セルとパレットだけ）
 
   入力：画像（png、bmp、jpg、gif など）、音声（wav、mp3、ogg、flac など）、画像の入ったフォルダ（名前順）。いくつでも並べてよい。
   出力（--out、省略すると x68/anim/<名前>/）。--plane で、どの面に使う形にするかを選ぶ（既定 g0）：

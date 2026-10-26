@@ -1,6 +1,6 @@
 r"""pansim.py : .pan を PC 上で実行するシミュレータ（時間と画面の確認用）
 
-使い方:  python pansim.py <file.pan> [--clock 10mhz] [--gif out.gif] [--png フォルダ] [--seconds 秒]
+使い方:  pt pansim <file.pan> [--clock 10mhz] [--gif out.gif] [--png フォルダ] [--seconds 秒]
 
   ※ pansim は実機のように画面に再生するものではなく、.pan の命令を PC 上で計算して、時間と画面（画像）を調べる道具。
     キー入力は受け付けず、「キーは押されない」ものとして進める。キーで終わるデータや永久ループのデータは、

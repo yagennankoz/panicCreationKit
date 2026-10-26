@@ -1,4 +1,4 @@
-# 永久ループ＋キーで終了の例（python tools/mkscene.py samples/layer1/forever.toml）
+# 永久ループ＋キーで終了の例（pt mkscene samples/layer1/forever.toml）
 # scene4.toml の 5 層を、キーが押されるまでくり返す。
 # 永久ループでは、1 周（基準の層 × loops）の中で各層がちょうど整数回ループするように loop_ratio／fps を決める。
 

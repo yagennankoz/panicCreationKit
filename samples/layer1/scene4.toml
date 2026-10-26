@@ -1,5 +1,5 @@
 # mkscene.py の設定ファイルの例：G1（背景）＋ G0（キャラ）＋ テキスト面 ＋ スプライト 2 層
-# （python tools/mkscene.py samples/layer1/scene4.toml）
+# （pt mkscene samples/layer1/scene4.toml）
 
 name = "lay4"
 clock = "10mhz"

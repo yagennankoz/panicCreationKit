@@ -1,8 +1,8 @@
 """buildPan.py : スケジュールのソース（.s）から .pan を作る（手で作るときのビルド）
 
-使い方:  python buildPan.py <名前>.s [--sim] [--clock 10mhz]       素材の一覧（<名前>.json）があれば素材もつなげる
-        python buildPan.py <フォルダ または <名前>.json> [--sim] [--clock 10mhz]
-        python buildPan.py <名前>.s [追加の .o ...]                 素材の一覧が無い .s（素材を .s に直接書いたもの）
+使い方:  pt buildPan <名前>.s [--sim] [--clock 10mhz]       素材の一覧（<名前>.json）があれば素材もつなげる
+        pt buildPan <フォルダ または <名前>.json> [--sim] [--clock 10mhz]
+        pt buildPan <名前>.s [追加の .o ...]                 素材の一覧が無い .s（素材を .s に直接書いたもの）
 
   素材の一覧（<名前>.json、mkparts が作る）が .s と同じフォルダにあるとき：
     <名前>_d.h（素材のラベル）を作り、.s をアセンブル・リンクして、一覧の素材（セル・パレット・ADPCM）を .pan の後ろにつなげる。

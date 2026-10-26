@@ -1,6 +1,6 @@
 """predict_time.py : mkanim.py が作ったアニメの再生時間を、MPU クロックごとに予測する
 
-使い方:  python predict_time.py <名前> [<名前> ...] [--clock 10mhz]
+使い方:  pt predict_time <名前> [<名前> ...] [--clock 10mhz]
   x68/anim/<名前>/<名前>.s のスケジュール（DRW0 と TMWA の並び、SETR/LOOP）と各セルの描画時間の見積もりから、
   --timelog の T1−T0（1/100 秒）を予測する。
 

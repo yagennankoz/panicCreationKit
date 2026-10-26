@@ -1,6 +1,6 @@
-# mkbench.py の設定ファイルの例（python tools/mkbench.py samples/bench/bench.toml）
+# mkbench.py の設定ファイルの例（pt mkbench samples/bench/bench.toml）
 # 導入 → キー待ち → ベンチ（10 秒、待たずに描いては切り替え、カウントをテキスト面に表示、効果音）→ 結果 → キー待ち → 終わり
-# 素材は python tools/make_test_anim.py samples/anim2 32 --static と python tools/make_test_anim.py --layers で作る
+# 素材は pt make_test_anim samples/anim2 32 --static と pt make_test_anim --layers で作る
 
 name = "bench1"
 clock = "10mhz"

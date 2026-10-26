@@ -1,6 +1,6 @@
 r"""mkscene.py : 層（グラフィック 0／1、テキスト面、スプライト）を重ねたアニメを、設定ファイルから作る
 
-使い方:  python mkscene.py <設定.toml> [--out フォルダ] [--stop-at-s] [--sim]
+使い方:  pt mkscene <設定.toml> [--out フォルダ] [--stop-at-s] [--sim]
   --out で出力先のフォルダ（省略すると設定の out、それも無ければ x68/anim/<名前>/）。
   --sim で、できた .pan を pansim（PC 上のシミュレータ）で動かし、再生時間と、各切り替えの画面が予定どおりかを確かめる
   （既定はしない。設定ファイルに sim = true と書いてもよい）。

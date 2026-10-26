@@ -56,7 +56,10 @@ Big Buck Bunny から作った .pan を配るときは、CC BY 3.0 に従って�
   （使うツールの版が変わっていることがあるので、ダウンロードし直します。サンプルも使うなら `setup.bat --force --samples`）。
 - ZIP で手に入れた場合：新しい ZIP を別のフォルダに展開し、`setup.bat` からやり直します。
   前のフォルダで作ったデータ（`x68\anim\` など）は、必要なら新しいフォルダへ写してください。
-自分の Python（3.11 以上）を使いたいときは、`pip install -r requirements.txt` のあと `python tools/setup/setup.py` でも準備できます。
+
+**自分の（インストール済みの）Python を使う場合**：ツールは `pt` で動かすと、setup.bat が用意した Python（`runtime\python\`）を使います。
+`python tools\〇〇.py` のように直接動かすと、インストールしてある Python が使われるので、先に `pip install -r requirements.txt`（Pillow、numpy）が必要です。
+ffmpeg などは `python tools\setup\setup.py` で用意できます。くわしくは docs/MANUAL.md の 2 章。
 
 ## 使い方（例）
 
