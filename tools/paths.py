@@ -1,4 +1,4 @@
-"""paths.py : 外部のプログラム（ffmpeg、run68、HAS、HLK）の場所を探す
+"""paths.py : 外部のプログラム（ffmpeg、run68、HAS、HLK、Z-MUSIC）の場所を探す
 
 探す順：環境変数 → setup で置いた場所（runtime/、x68/bin/）→ PATH → C:\\tools の下（自分で置いた場合）。
 見つからなければ、いちばん望ましい場所（setup で置く所）を返す（使うときに「見つからない」と分かる）。
@@ -41,3 +41,8 @@ def has():
 def hlk():
     """リンカ：HLK evolution（hlk.r、setup で置く）、無ければ x68/bin/hlk.x（HLK v3.01 などを自分で置いたもの）"""
     return _find("PANTOOL_HLK", [X68 / "bin" / "hlk.r", X68 / "bin" / "hlk.x"])
+
+
+def zmusic():
+    """Z-MUSIC ver2 の ZMUSIC.X（MML → ZMD のコンパイルに使う。setup で x68/zmusic/ に置く）"""
+    return _find("PANTOOL_ZMUSIC", [X68 / "zmusic" / "zmusic.x", X68 / "bin" / "zmusic.x"])

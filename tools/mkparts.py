@@ -1,11 +1,12 @@
-"""mkparts.py : 画像・音声から、セル（.cel）・パレット（.pal）・ADPCM（.pcm）と、.s のひな形を作る
+"""mkparts.py : 画像・音声・MML から、セル（.cel）・パレット（.pal）・ADPCM（.pcm）・FM 音源の曲（.zmd）と、.s のひな形を作る
 
 使い方:  pt mkparts <画像・音声・画像のフォルダ…> --name 名前 [オプション]
   例：pt mkparts title.png bg.png se.wav --name demo
       pt mkparts frames/ voice.wav --name anim1 --fps 8 --build
       pt mkparts logo.png --name logo --make cel,pal          （.s は作らず、セルとパレットだけ）
 
-  入力：画像（png、bmp、jpg、gif など）、音声（wav、mp3、ogg、flac など）、画像の入ったフォルダ（名前順）。いくつでも並べてよい。
+  入力：画像（png、bmp、jpg、gif など）、音声（wav、mp3、ogg、flac など）、画像の入ったフォルダ（名前順）、
+        FM 音源の MML（Z-MUSIC ver2 の .zms／.opm）か ZMD（.zmd）。いくつでも並べてよい。
   出力（--out、省略すると x68/anim/<名前>/）。--plane で、どの面に使う形にするかを選ぶ（既定 g0）：
     --plane g0／g1（グラフィック、256 色）
       <画像>.cel   a_enc のセル（code #4、256x256、差分なしの 1 枚まるごと。bpica.x と同じ形）。DRW0／DRW1 で描く
@@ -18,6 +19,8 @@
                    SPCG でパターンを登録し、SPON で表示する（全部の画像で PCG は 256 個まで）
       <名前>.pal   16 色のパレット（34 バイト。TPAL <--sprite-pal の番号> で使う）
     <音声>.pcm     ADPCM（MSM6258、15.625kHz、下位 4 ビットが先。PCMP で使う）
+    <MML>.zmd      FM 音源の曲（Z-MUSIC ver2 の ZMD。ZMPL で鳴らす。再生には Z-MUSIC の常駐が要る）
+    <MML>.zse      --se で選んだ MML は効果音（ZSEP で鳴らす）。音色の定義があれば <MML>v.zmv（ZMVS で先に登録）も
     <名前>.s       スケジュールのひな形（音を鳴らし、画像を --fps の速さで順に表示する。選んだ面の命令で）。自由に書き換えてよい
     <名前>.json    素材の一覧（buildPan.py が使う）。.s と一緒に作る
   ファイル名は Human68k に合わせて英数字 8 文字までに縮める（重なるときは番号を付ける）。
@@ -25,7 +28,9 @@
 オプション:
   --name 名前          出力名（英数字 8 文字以内。.s・.json・.pal の名前）。必須
   --out フォルダ        出力先
-  --make 対象          作るもの：cel、pal、pcm、s をカンマ区切りで（既定は全部）。例 --make cel,pal
+  --make 対象          作るもの：cel、pal、pcm、zmd、s をカンマ区切りで（既定は全部）。例 --make cel,pal
+                       （zmd は FM 音源の .zse・.zmv も指す）
+  --se ファイル        効果音として変換する MML（ファイル名。カンマ区切りで複数）。ほかの MML は曲として変換する
                        （cel はスプライトのセル .spr も指す）
   --plane 面           g0（既定）／g1／text／sprite
   --sprite-pal N       スプライトのパレットの番号（1〜15、既定 1）
@@ -59,11 +64,13 @@ import txt_enc  # noqa: E402
 import animcommon  # noqa: E402
 import cli  # noqa: E402
 import mkscene  # noqa: E402
+import mml2zmd  # noqa: E402
 import clock as clk  # noqa: E402
 
 IMAGE_EXT = {".png", ".bmp", ".jpg", ".jpeg", ".gif", ".tif", ".tiff", ".webp"}
 AUDIO_EXT = {".wav", ".mp3", ".ogg", ".flac", ".m4a", ".aac", ".aif", ".aiff", ".wma", ".opus"}
-TARGETS = ("cel", "pal", "pcm", "s")
+MML_EXT = {".zms", ".opm", ".zmd"}
+TARGETS = ("cel", "pal", "pcm", "zmd", "s")
 TICK_HZ = animcommon.VSYNC_HZ
 
 
@@ -88,8 +95,8 @@ def short_name(stem, used):
 
 
 def collect(inputs):
-    """入力を画像と音声に分ける（フォルダは中の画像を名前順に）"""
-    images, audios = [], []
+    """入力を画像・音声・MML に分ける（フォルダは中の画像を名前順に）"""
+    images, audios, mmls = [], [], []
     for s in inputs:
         p = Path(s)
         if p.is_dir():
@@ -103,11 +110,13 @@ def collect(inputs):
                 images.append(p)
             elif ext in AUDIO_EXT:
                 audios.append(p)
+            elif ext in MML_EXT:
+                mmls.append(p)
             else:
-                raise SystemExit(f"画像でも音声でもないファイルです（拡張子 {ext}）：{p}")
+                raise SystemExit(f"画像でも音声でも MML でもないファイルです（拡張子 {ext}）：{p}")
         else:
             raise SystemExit(f"見つかりません：{p}")
-    return images, audios
+    return images, audios, mmls
 
 
 def load_image(path, a):
@@ -132,7 +141,8 @@ def make_cels(frames, a, base_pal, top):
     return F.idx, pal
 
 
-def template(name, images, audios, pal_labels, fps, has_cel, has_pcm, plane="g0", sprite_pal=1, wait_mode="vwait"):
+def template(name, images, audios, pal_labels, fps, has_cel, has_pcm, plane="g0", sprite_pal=1, wait_mode="vwait",
+             zm_bgm=(), zm_se=(), zm_voice=()):
     """スケジュールのひな形：音を鳴らし、画像を順に表示する。
     グラフィック・テキストは 2 か所を交互に描いてスクロールで切り替え、スプライトは SPOF／SPON で切り替える"""
     wait = max(1, round(TICK_HZ / fps))
@@ -158,6 +168,14 @@ def template(name, images, audios, pal_labels, fps, has_cel, has_pcm, plane="g0"
         L.append(f"\tPCMP\t{lab},{lab}_end-{lab}\t* 音（{audios[0][0].name}）")
         for _, other in audios[1:]:
             L.append(f"*\tPCMP\t{other},{other}_end-{other}\t* ほかの音（鳴らす所に移して使う）")
+    for v in zm_voice:
+        L.append(f"\tZMVS\t{v}\t\t\t* 効果音の音色を登録する")
+    for k, (path, lab) in enumerate(zm_bgm):
+        L.append(("\t" if k == 0 else "*\t") + f"ZMPL\t{lab}\t\t\t* FM 音源の曲（{path.name}）を頭から鳴らす"
+                 + ("" if k == 0 else "（鳴らす所に移して使う）"))
+    for path, lab, track in zm_se:
+        L += [f"*\tZSEP\t{lab},{track}\t\t* 効果音（{path.name}）を曲のトラック {track} から鳴らす（鳴らす所に移して使う）",
+              f"*\tZSES\t{lab},{track}\t\t* 効果音を途中で止めるとき"]
     if has_cel:
         each = len(set(pal_labels)) > 1  # 画像ごとのパレット（--pal-each）
         draw, scl = {"g0": ("DRW0", "SCL0"), "g1": ("DRW1", "SCL1"), "text": ("DRWT", "SCLT")}.get(plane, (None, None))
@@ -182,9 +200,14 @@ def template(name, images, audios, pal_labels, fps, has_cel, has_pcm, plane="g0"
         L.append(f"\tTMWA\t{wait}")
     if vw:
         L = [animcommon.vwait_line(wait) if ln == f"\tTMWA\t{wait}" else ln for ln in L]
-    L += ["\tPCMS\t\t\t\t* 音を止める" if has_pcm and audios else "*\tPCMS", "\tDEND", "\tEXIT"]
+    L += ["\tPCMS\t\t\t\t* 音を止める" if has_pcm and audios else "*\tPCMS"]
+    if zm_bgm or zm_se:
+        L.append("\tZMST\t\t\t\t* FM 音源を止める")
+    L += ["\tDEND", "\tEXIT"]
     if vw:
         L = animcommon.with_vwait_head(L) + animcommon.VWAIT_CODE.split("\n")
+    if zm_bgm or zm_se or zm_voice:
+        L = animcommon.with_zmusic_head(L) + animcommon.ZMUSIC_CODE.split("\n")
     L += ["",
           "* ---- 素材のラベル（buildPan.py が作る。この .include はソースの最後に置くこと）----",
           f"\t.include\t{name}_d.h", "", "\t.end", ""]
@@ -216,6 +239,7 @@ def main(argv):
     ap.add_argument("--wait", choices=["tmwa", "vwait"], default="vwait")
     ap.add_argument("--clock", default=a_enc.DEFAULT_CLOCK)
     ap.add_argument("--build", action="store_true")
+    ap.add_argument("--se", default="")
     a = ap.parse_args(argv[1:])
 
     name = a.name
@@ -236,13 +260,19 @@ def main(argv):
         raise SystemExit("--build には .s が要ります（--make に s を入れてください）")
     animcommon.parse_key_colors(a.transparent)  # 書き方の確認
 
-    images, audios = collect(a.inputs)
+    images, audios, mmls = collect(a.inputs)
+    se_names = {s.strip().lower() for s in a.se.split(",") if s.strip()}
+    unknown = se_names - {m.name.lower() for m in mmls} - {m.stem.lower() for m in mmls}
+    if unknown:
+        raise SystemExit(f"--se に書いた MML が入力にありません：{', '.join(sorted(unknown))}")
     if not images and make & {"cel", "pal"}:
         make -= {"cel", "pal"}
     if not audios:
         make.discard("pcm")
+    if not mmls:
+        make.discard("zmd")
     if not make:
-        raise SystemExit("作るものがありません（画像も音声も無いか、--make に合う入力がありません）")
+        raise SystemExit("作るものがありません（画像も音声も MML も無いか、--make に合う入力がありません）")
     # 出力先。mkparts はファイルを消さないので、すでに素材のあるフォルダへ足してもよい（同じ名前のファイルは上書き）
     out = a.out.resolve() if a.out else mkscene.ROOT / "x68" / "anim" / name
     if out.exists() and not out.is_dir():
@@ -313,6 +343,31 @@ def main(argv):
             parts.append([f"pcm_{short}", f"{short}.pcm"])
             print(f"  ADPCM {short}.pcm：{len(data)} バイト（{len(data) * 2 / adpcm.RATE:.2f} 秒）← {path.name}")
 
+    # ---- MML：FM 音源の曲・効果音（Z-MUSIC ver2） ----
+    zm_bgm, zm_se, zm_voice = [], [], []
+    if mmls and ("zmd" in make or "s" in make):
+        for path in mmls:
+            short = short_name(path.stem, used)
+            data = mml2zmd.load(path)
+            if path.name.lower() in se_names or path.stem.lower() in se_names:
+                zse, zmv, chs = mml2zmd.to_se(data, path)
+                (out / f"{short}.zse").write_bytes(zse)
+                parts.append([f"se_{short}", f"{short}.zse"])
+                zm_se.append((path, f"se_{short}", chs[0] + 1))
+                info = f"効果音 {short}.zse：{len(zse)} バイト、トラック {len(chs)} 本（{' '.join(map(mml2zmd.channel_name, chs))}）"
+                if zmv:
+                    vs = short_name(short[:7] + "v", used)
+                    (out / f"{vs}.zmv").write_bytes(zmv)
+                    parts.append([f"sv_{vs}", f"{vs}.zmv"])
+                    zm_voice.append(f"sv_{vs}")
+                    info += f"、音色 {vs}.zmv"
+                print(f"  {info} ← {path.name}")
+            else:
+                (out / f"{short}.zmd").write_bytes(mml2zmd.to_bgm(data))
+                parts.append([f"zm_{short}", f"{short}.zmd"])
+                zm_bgm.append((path, f"zm_{short}"))
+                print(f"  FM 音源の曲 {short}.zmd：{len(data)} バイト ← {path.name}")
+
     # ---- .s のひな形と素材の一覧 ----
     if "s" in make:
         src = out / f"{name}.s"
@@ -322,7 +377,8 @@ def main(argv):
             shown = [(img_items[k][0], cel_labels[k]) for k in range(len(img_items)) if k in cel_labels]
             labs = [pal_labels[k] for k in range(len(img_items)) if k in cel_labels]
             text = template(name, shown, [(p, f"pcm_{s}") for p, s in aud_items],
-                            labs, a.fps, bool(shown), bool(audios), plane, a.sprite_pal, a.wait)
+                            labs, a.fps, bool(shown), bool(audios), plane, a.sprite_pal, a.wait,
+                            zm_bgm, zm_se, zm_voice)
             animcommon.write_sjis(src, text)
             print(f"  ひな形 {src.name}")
         (out / f"{name}.json").write_text(json.dumps(

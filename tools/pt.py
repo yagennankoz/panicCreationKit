@@ -19,6 +19,7 @@ MAIN = [  # よく使うもの（一覧の上に出す）
     ("pansim", ".pan を PC 上で動かして確かめる"),
     ("png2cel", "PNG → セル（bpica.x 互換）"),
     ("adpcm", "音声 → ADPCM"),
+    ("mml2zmd", "FM 音源の MML（Z-MUSIC ver2）→ 曲（.zmd）・効果音（.zse）"),
     ("setup", "使うツールのダウンロード（setup.bat と同じ）"),
 ]
 

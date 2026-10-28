@@ -22,6 +22,7 @@ x68/**/*.x
 
 # XM6 の WAV キャプチャ（大きいので管理外）
 x68/test/*.wav
+samples/results_*/**/*.wav
 samples/test_video.mp4
 samples/bbb/*.mp4
 samples/layer1/bg/
@@ -46,3 +47,7 @@ samples/bbb/*.mp4
 
 # setup.bat が置く panic の付属ドキュメント（PAN13801.LZH から）
 docs/panic/
+
+# setup.bat が置く Z-MUSIC（ZMSC208X.LZH）とそのマニュアル（ZMSC2MAN.LZH）
+x68/zmusic/
+docs/zmusic/

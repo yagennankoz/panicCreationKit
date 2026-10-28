@@ -17,6 +17,10 @@ r"""mkanim.py : PNG 連番または動画 1 本から panic の .pan を作る�
   --gain     音声の音量調整 [dB]（既定 0）
   --audio-offset 秒  音を鳴らし始める時刻（負なら音の頭を削る）
   --audio-every N    永久ループで N 周ごとに音を鳴らし直す（既定は音の長さから自動、0 で最初に 1 回だけ）
+  --fm ファイル  FM 音源の曲（Z-MUSIC ver2 の MML（.zms／.opm）か ZMD）。再生には Z-MUSIC（ZMSC.X など）の常駐が要る。
+                 効果音も鳴らすときは mkscene の [[se]] を使う
+  --fm-offset 秒  曲を鳴らし始める時刻（0 以上）
+  --fm-every N    永久ループで N 周ごとに曲を頭から鳴らし直す（既定 0＝最初に 1 回だけ）
   --start 秒     （動画のときだけ）動画の何秒目から使うか。省略すると頭（0 秒）から。動画の音も同じ所から
   --duration 秒  （動画のときだけ）--start から何秒分を使うか。省略すると最後まで
   --clock    対象機の MPU クロック（10、16.7、24mhz など。既定 10mhz）
@@ -73,7 +77,7 @@ def apply_config(ap, a, argv):
             cli.check_keys("設定ファイル", {key: val}, [k for k in known if k not in ("config", "help")])
         if dest in given or (dest in ("src", "name") and getattr(a, dest) is not None and positional):
             continue
-        if dest in ("src", "audio"):
+        if dest in ("src", "audio", "fm"):
             if not isinstance(val, str):
                 raise SystemExit(f"設定ファイル：{key} はファイル名を文字列で書いてください（今は {val!r}）")
             val = (base / val).resolve()
@@ -105,6 +109,10 @@ def scene_config(a) -> dict:
         cfg["loop"] = "forever"
         cfg["exit_key"] = a.exit_key
     cfg["audio_offset"] = a.audio_offset
+    if a.fm:
+        cfg["fm"] = str(Path(a.fm).resolve())
+        cfg["fm_offset"] = a.fm_offset
+        cfg["fm_every"] = a.fm_every
     if a.audio_every is not None:
         cfg["audio_every"] = a.audio_every
     if not a.no_audio:
@@ -243,6 +251,9 @@ def main(argv):
     ap.add_argument("--gain", type=float, default=0.0)
     ap.add_argument("--audio-offset", type=float, default=0.0, help="音を鳴らし始める時刻 [秒]（負なら音の頭を削る）")
     ap.add_argument("--audio-every", type=int, help="永久ループで何周ごとに音を鳴らし直すか（0 なら最初に 1 回だけ）")
+    ap.add_argument("--fm", type=Path, help="FM 音源の曲（Z-MUSIC ver2 の MML か ZMD）")
+    ap.add_argument("--fm-offset", type=float, default=0.0, help="曲を鳴らし始める時刻 [秒]")
+    ap.add_argument("--fm-every", type=int, default=0, help="永久ループで何周ごとに曲を頭から鳴らし直すか（0＝最初に 1 回だけ）")
     ap.add_argument("--transparent", help="透明にする色。\"#FF00FF\" など、\"corner\"＝各画像の左上 (0,0) の色、"
                                            "\";\" 区切りで複数")
     ap.add_argument("--transparent-tolerance", type=int, default=0, help="透明色の許す差（RGB 各 0〜255、既定 0＝ぴったり）")
@@ -264,7 +275,11 @@ def main(argv):
     cli.check_number("オプション", "--loop", a.loop, integer=True, minimum=1)
     cli.check_number("オプション", "--split", a.split, above=0)
     cli.check_number("オプション", "--pixel-aspect", a.pixel_aspect, above=0)
+    if a.fm is not None:
+        cli.need_file(a.fm, "FM 音源の曲（--fm）")
     if a.split:
+        if a.fm is not None:
+            raise SystemExit("--fm と --split は一緒に使えません")
         return build_split(a, argv)
     import mkscene  # mkscene は animcommon を使う（循環を避けてここで読み込む）
     return mkscene.build(scene_config(a), Path.cwd(), a.stop_at_s, f"mkanim {' '.join(argv[1:])}")

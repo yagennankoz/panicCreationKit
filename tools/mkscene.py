@@ -27,6 +27,16 @@ r"""mkscene.py : 層（グラフィック 0／1、テキスト面、スプライ
   audio_offset = 0.5      音を鳴らし始める時刻 [秒]（アニメの始まりから。負なら音の頭を削って早める）
   audio_every = 3         永久ループで何周ごとに音を鳴らし直すか（既定：音が鳴り終わる周の数。0 なら最初に 1 回だけ）。
                           永久ループのくり返しの単位はこの周の数になる（音と絵が毎回同じ関係でくり返す）
+  fm = "bgm.zms"          FM 音源の曲（Z-MUSIC ver2 の MML（.zms／.opm）か ZMD）。再生には Z-MUSIC（ZMSC.X）の常駐が要る
+  fm_offset = 0.5         曲を鳴らし始める時刻 [秒]（アニメの始まりから。0 以上）
+  fm_every = 2            永久ループで何周ごとに曲を頭から鳴らし直すか（止めてから鳴らす）。既定 0＝最初に 1 回だけ
+                          （曲の中の [do]〜[loop] でくり返す曲なら 0 のままでよい）。永久ループでないときは使わない
+  [[se]]                  FM 音源の効果音（いくつでも。Z-MUSIC ver2 の MML か ZMD。共通コマンドは音色の定義だけ）
+  src = "shot.zms"
+  offset = 1.0            鳴らす時刻 [秒]（アニメの始まりから。0 以上）
+  every = 1               永久ループで何周ごとに鳴らすか（既定 1＝毎周。0＝最初に 1 回だけ）
+  track = 8               割り込ませる曲のトラック（既定：効果音の最初のトラックのチャンネル。FM3 なら 3）。
+                          曲のそのトラックは、効果音の間だけ休む。効果音のチャンネルと、曲のそのトラックのチャンネルは同じにすること
   no_drop = false         描画が間に合わないコマを飛ばさない（遅らせる）
   timelog = true          再生時間を anim\<名前>\time.txt に書く（永久ループではキーで終えた時までの時間）
   order = ["sprite", "text", "graphic"]   重なり順（手前から。既定は panic.x と同じ）。BG はスプライトの層の中（BG1＜BG0＜スプライト）
@@ -114,6 +124,7 @@ import a_enc  # noqa: E402
 import adpcm  # noqa: E402
 import animcommon  # noqa: E402
 import cli  # noqa: E402
+import mml2zmd  # noqa: E402
 import panbuild  # noqa: E402
 import pansim  # noqa: E402
 from pansim import KEY_US, MOVE_US, SPOF_US  # noqa: E402
@@ -376,7 +387,29 @@ def plan_timeline(layers, loops, cycles=0):
     return end
 
 
-def schedule(layers, end, a, clock, sprites=(), boundaries=(), pcm_ticks=(), key_check=False, pcm_code=None):
+class Sound:
+    """鳴らす音（ADPCM・FM 音源の曲・効果音）1 つ。off_t＝鳴らす時刻（カウント）、every＝永久ループで何周ごとに鳴らすか（0＝1 回だけ）"""
+
+    def __init__(self, key, prefix, play, us, off_t, every, end):
+        self.key, self.prefix, self.play, self.us, self.off_t = key, prefix, play, us, off_t
+        self.once = every == 0
+        self.every = max(1, every)
+        self.pos, self.c0 = off_t % end, off_t // end  # 鳴らす周の中の時刻と、最初に鳴らす周
+        self.ticks = set()
+        self.what = {"pcm": "音", "fm": "FM 音源の曲"}.get(key, f"効果音（{key}）")
+
+    def code(self, n):
+        """周を数えて鳴らす：<key>_cnt が 0 なら鳴らして every に戻す（1 回だけなら、もう鳴らない大きな数）。そして 1 減らす"""
+        again = 0x7FFFFFFF if self.once else self.every
+        return [f"\tRDRL\t{self.key}_cnt\t\t\t* {self.what}：何周ごとに鳴らすかを数える",
+                f"\tIFNE\t0,{self.prefix}{n}"] + list(self.play) + [
+                f"\tSETR\t{again}",
+                f"{self.prefix}{n}:",
+                "\tADDR\t$FFFFFFFF\t\t* 1 減らす（SUBR は sch.h に 2 つあるので使わない）",
+                f"\tWTRL\t{self.key}_cnt"]
+
+
+def schedule(layers, end, a, clock, sprites=(), boundaries=(), key_check=False, sounds=(), counted=False):
     """切り替えの間に描くものを決め、スケジュールの命令の行とセルを作る。
 
     - 各層は L.slots の入れ物（面の中の 256x256 の場所）を使う。2 つなら (0,0) と (256,0) を交互に、4 つなら下半分も使う。
@@ -388,7 +421,7 @@ def schedule(layers, end, a, clock, sprites=(), boundaries=(), pcm_ticks=(), key
     - 締め切りまでに描き終わらなかったコマは飛ばす（no_drop なら遅れても描き切る）。
     - 差分（diff）は、描画先に今ある絵（content、実際の GRAM の内容）に対して作る。
     - boundaries の時刻（永久ループの周の区切り）で、状態とそこまでの行数を記録する。
-    - pcm_ticks の時刻に音を鳴らす（PCMP。pcm_code(n) があればその命令の列＝周を数えて鳴らすか決める）。
+    - 音（sounds の各 Sound）を S.ticks の時刻に鳴らす（PCMP・ZMPL・ZSEP。counted なら周を数えて鳴らすか決める命令の列）。
       0 のときは呼び出し側が最初に置く。
     - 切り替えの直後に実行する命令（キーの確認、スプライトの SPOF／SPON、BG の切り替え、PCMP）の時間は、次の間の予算から引く。
     """
@@ -710,10 +743,10 @@ def schedule(layers, end, a, clock, sprites=(), boundaries=(), pcm_ticks=(), key
 
     W_FAST = animcommon.TIME_WEIGHTS[-1]
     body = []
-    ticks = sorted({t for L in list(layers) + list(sprites) for t, _ in L.events} | {t for t in pcm_ticks if t > 0}
+    ticks = sorted({t for L in list(layers) + list(sprites) for t, _ in L.events} | {t for S in sounds for t in S.ticks}
                    | set(boundaries))  # 周の区切りも（コマが 1 枚だけで切り替えが無いときのため）
-    pcm_set = set(pcm_ticks)
-    dropped, late, splits, hits, n_pcm = [], [], 0, 0, 0
+    dropped, late, splits, hits = [], [], 0, 0
+    n_sound = {S.key: 0 for S in sounds}
     expected = [(0, {L.name: 0 for L in list(layers) + list(sprites)})]  # (時刻, 各層のコマ)
     marks = [(0, 0, snapshot(0))] if boundaries else []  # (時刻, body の行数, 状態)
     prev_t = 0
@@ -847,10 +880,11 @@ def schedule(layers, end, a, clock, sprites=(), boundaries=(), pcm_ticks=(), key
         carry += sum(MOVE_US * slow for ln in body[-len(layers) - 1:] if ln.startswith("\tMOVW") and "表示を切り替え" in ln)
         if any(f in flips for f in [S.name for S in sprites]):
             carry += SPOF_US * slow_io + sum(7 * S.frame_chars[S.st["cur"]] for S in sprites) * slow_io
-        if e in pcm_set:
-            carry += 2400 * slow  # PCMP（pantime.txt：最大 2.4ms）。周を数えるときも、鳴らすかもしれないので必ず見込む
-            body += pcm_code(n_pcm) if pcm_code else ["\tPCMP\tpcm,pcm_end-pcm\t\t* 音"]
-            n_pcm += 1
+        for S in sounds:  # 音。周を数えるときも、鳴らすかもしれないので時間は必ず見込む
+            if e in S.ticks:  # PCMP は pantime.txt の最大 2.4ms、Z-MUSIC の命令は pansim.ZM_US（実測。一部は仮の値）
+                carry += S.us * slow
+                body += S.code(n_sound[S.key]) if counted else list(S.play)
+                n_sound[S.key] += 1
         if e in boundaries:
             marks.append((e, len(body), snapshot(e)))
         prev_t = e
@@ -939,7 +973,8 @@ SCENE_KEYS = {"name", "clock", "loops", "loop", "exit_key", "diff", "dither", "d
               "audio", "audio_start", "audio_duration", "gain", "audio_offset", "audio_every", "audio_loop",
               "no_drop", "timelog", "order", "graphic_order", "aspect", "pixel_aspect", "fit",
               "transparent", "transparent_tolerance", "sim", "buffers", "out", "wait", "fixed_cels",
-              "adjust_every", "adjust_frames", "layer"}
+              "adjust_every", "adjust_frames", "fm", "fm_offset", "fm_every", "se", "layer"}
+SE_KEYS = {"src", "offset", "every", "track"}
 LAYER_KEYS = {"name", "plane", "src", "start", "duration", "base", "fps", "loop_ratio", "first", "count",
               "sequence", "hold", "aspect", "pixel_aspect", "fit", "transparent", "transparent_tolerance", "diff",
               "buffers", "fixed_cels"}
@@ -988,6 +1023,31 @@ def validate(a: dict, base_dir: Path):
     cli.check_number(W, "gain", a.get("gain"))
     cli.check_number(W, "audio_offset", a.get("audio_offset"))
     cli.check_number(W, "audio_every", a.get("audio_every"), integer=True, minimum=0)
+    if a.get("fm") is not None:
+        if not isinstance(a["fm"], str):
+            raise SystemExit(f"設定：fm は曲のファイル名（.zms／.opm／.zmd）を文字列で書いてください（今は {a['fm']!r}）")
+        fp = Path(a["fm"])
+        cli.need_file(fp if fp.is_absolute() else base_dir / fp, "FM 音源の曲（fm）")
+    cli.check_number(W, "fm_offset", a.get("fm_offset"), minimum=0)
+    cli.check_number(W, "fm_every", a.get("fm_every"), integer=True, minimum=0)
+    ses = a.get("se")
+    if ses is not None:
+        if not isinstance(ses, list) or not all(isinstance(s, dict) for s in ses):
+            raise SystemExit("設定：se は [[se]] の形で書いてください")
+        if len(ses) > 9:
+            raise SystemExit(f"設定：効果音（[[se]]）は 9 個までにしてください（今は {len(ses)} 個）")
+        for i, s in enumerate(ses, 1):
+            WS = f"効果音（{i} 番目の [[se]]）"
+            cli.check_keys(WS, s, SE_KEYS, set(), "")
+            if not isinstance(s.get("src"), str) or not s.get("src"):
+                raise SystemExit(f"{WS}：src に効果音のファイル名（.zms／.opm／.zmd）を書いてください")
+            sp = Path(s["src"])
+            cli.need_file(sp if sp.is_absolute() else base_dir / sp, f"{WS} の src")
+            cli.check_number(WS, "offset", s.get("offset"), minimum=0)
+            cli.check_number(WS, "every", s.get("every"), integer=True, minimum=0)
+            cli.check_number(WS, "track", s.get("track"), integer=True, minimum=1)
+            if s.get("track") is not None and s["track"] > 32:
+                raise SystemExit(f"{WS}：track は 1〜32 にしてください（今は {s['track']}）")
     for k, allowed in (("order", DEFAULT_ORDER), ("graphic_order", ["g0", "g1"])):
         v = a.get(k)
         if v is not None and (not isinstance(v, list) or sorted(map(str, v)) != sorted(allowed)):
@@ -1220,47 +1280,63 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
     off_t = round(offset * VSYNC_HZ)
     pcm_len_t = (len(pcm) * 2 / adpcm.RATE) * VSYNC_HZ if pcm else 0
 
-    # タイミング。永久ループで音があるときは、周を数えて（カウンタ pcm_cnt）audio_every 周ごとに鳴らす。
-    # ループの本体は音の間隔と関係なく、状態がくり返す最短の周の数にできる（音のために何十周も並べなくてよい）。
+    # タイミング。永久ループで音（ADPCM・FM 音源の曲・効果音）があるときは、音ごとに周を数えて（カウンタ <名前>_cnt）
+    # every 周ごとに鳴らす。ループの本体は音の間隔と関係なく、状態がくり返す最短の周の数にできる（音のために何十周も並べなくてよい）。
     base_end = plan_timeline(layers, loops, 0)  # 1 周の長さを知るため
-    every = 1
-    once = False
-    if forever and pcm:
-        if "audio_every" in a:
-            every = int(a["audio_every"])
-        elif a.get("audio_loop", True) is False:
-            every = 0
-        else:  # 音が鳴り終わるまでの周の数（音の途中で鳴らし直さない）
-            every = max(1, -(-(off_t + pcm_len_t) // base_end))
-            every = int(every)
-        if every == 0:  # 最初に 1 回だけ鳴らす
-            once, every = True, 1
-    end = plan_timeline(layers, loops, 0)
-    unit = end * every  # 音を鳴らし直す間隔（カウント）
-    counted = bool(forever and pcm)  # 周を数えて鳴らす
-    pcm_pos, pcm_c0 = off_t % end, off_t // end  # 音を鳴らす周の中の時刻と、最初に鳴らす周
+    end = base_end
+    sounds = []
     if pcm:
-        msg = f"音 {len(pcm) * 2 / adpcm.RATE:.2f} 秒、{offset:.2f} 秒後に鳴らす"
+        if "audio_every" in a:
+            ev = int(a["audio_every"])
+        elif a.get("audio_loop", True) is False:
+            ev = 0
+        else:  # 音が鳴り終わるまでの周の数（音の途中で鳴らし直さない）
+            ev = int(max(1, -(-(off_t + pcm_len_t) // base_end)))
+        sounds.append(Sound("pcm", "pcs", ["	PCMP	pcm,pcm_end-pcm		* 音"], 2400, off_t, ev, end))
+    zm_parts, zm_voices = [], []  # FM 音源（Z-MUSIC）の素材と、最初に登録する音色の表
+    if a.get("fm"):
+        fp = Path(a["fm"])
+        fp = fp if fp.is_absolute() else base_dir / fp
+        zm_parts += mml2zmd.convert(fp, out, "fm", se=False)
+        sounds.append(Sound("fm", "fms", ["	ZMPL	fm			* FM 音源の曲を頭から鳴らす（鳴っていれば止めてから）"],
+                            pansim.ZM_US[b"PTZP"], round(float(a.get("fm_offset", 0.0)) * VSYNC_HZ),
+                            int(a.get("fm_every", 0)), end))
+    for i, s in enumerate(a.get("se") or []):
+        sp = Path(s["src"])
+        sp = sp if sp.is_absolute() else base_dir / sp
+        lab = f"se{i}"
+        zse, zmv, chs = mml2zmd.to_se(mml2zmd.load(sp), sp)
+        (out / f"{lab}.zse").write_bytes(zse)
+        zm_parts.append((lab, f"{lab}.zse"))
+        if zmv:
+            (out / f"{lab}v.zmv").write_bytes(zmv)
+            zm_parts.append((f"{lab}v", f"{lab}v.zmv"))
+            zm_voices.append(f"{lab}v")
+        track = int(s.get("track") or chs[0] + 1)
+        print(f"効果音 {lab}：{sp.name}（トラック {len(chs)} 本：{' '.join(mml2zmd.channel_name(c) for c in chs)}）を"
+              f"曲のトラック {track} から鳴らす")
+        sounds.append(Sound(lab, f"s{i}s", [f"	ZSEP	{lab},{track}		* FM 音源の効果音 {sp.name}"],
+                            pansim.ZM_US[b"PTZE"], round(float(s.get("offset", 0.0)) * VSYNC_HZ),
+                            int(s.get("every", 1)), end))
+    for S in sounds:
+        if S.key == "pcm":
+            msg = f"音 {len(pcm) * 2 / adpcm.RATE:.2f} 秒、{S.off_t / VSYNC_HZ:.2f} 秒後に鳴らす"
+        else:
+            msg = f"{'FM 音源の曲' if S.key == 'fm' else '効果音 ' + S.key}：{S.off_t / VSYNC_HZ:.2f} 秒後に鳴らす"
         if forever:
-            msg += "（最初に 1 回だけ）" if once else f"、{every} 周（{unit * 18.03 / 1000:.2f} 秒）ごとに鳴らし直す"
-            if not once and off_t + pcm_len_t > unit + 1:
+            msg += "（最初に 1 回だけ）" if S.once else f"、{S.every} 周（{end * S.every * 18.03 / 1000:.2f} 秒）ごとに鳴らし直す"
+            if S.key == "pcm" and not S.once and off_t + pcm_len_t > end * S.every + 1:
                 msg += "  ← 鳴り終わる前に鳴らし直すので、音の終わりが切れます"
-        elif off_t >= end:
+        elif S.off_t >= end:
             msg += "  ← アニメが終わった後なので鳴りません"
         print(msg)
+        if S.key == "fm" and (S.off_t > 0 or (forever and not S.once)):
+            print("  注意：曲を鳴らす命令（ZMPL）は、Z-MUSIC を zmsc -n（初期化なし）で常駐させたときは一瞬ですが、"
+                  "ふつうの常駐では 10MHz で約 0.12 秒かかり、その間は描けません（その後のコマが飛ぶことがあります）。"
+                  "見積もりは zmsc -n の値です")
     d_layers = [L for L in layers if not L.sprite]  # 描画先のある層（G0／G1／テキスト／BG）
     for S in s_layers:  # 各コマのキャラ数（SPON の時間）
         S.frame_chars = [spr_enc.header(spr_by_label[lb])[0] if lb else 0 for lb in S.frame_label]
-    def pcm_code(n):
-        """周を数えて鳴らす：pcm_cnt が 0 なら鳴らして audio_every に戻す（1 回だけなら、もう鳴らない大きな数）。そして 1 減らす"""
-        again = 0x7FFFFFFF if once else every
-        return ["\tRDRL\tpcm_cnt\t\t\t* 音：何周ごとに鳴らすかを数える",
-                f"\tIFNE\t0,pcs{n}",
-                "\tPCMP\tpcm,pcm_end-pcm\t\t* 音",
-                f"\tSETR\t{again}",
-                f"pcs{n}:",
-                "\tADDR\t$FFFFFFFF\t\t* 1 減らす（SUBR は sch.h に 2 つあるので使わない）",
-                "\tWTRL\tpcm_cnt"]
 
     for L in d_layers:  # 差分を使うか：層の diff、無ければ全体の diff
         L.diff = bool(L.cfg_diff if L.cfg_diff is not None else a.get("diff", False))
@@ -1284,16 +1360,16 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
             L.slots = POS4 if (nb == 4 and not L.text and not L.bg) else POS
         end = plan_timeline(layers, loops, cycles + 1 if forever else 0)
         boundaries = [k * end for k in range(1, cycles + 1)]  # 永久ループ：周ごとに状態を記録する
-        if not pcm:
-            pcm_ticks = []
-        elif not forever:
-            pcm_ticks = [off_t] if off_t < end else []
-        else:  # 毎周、同じ時刻に「鳴らすかどうか」を調べる（0 なら最初の周の分は前に置く）
-            pcm_ticks = [c * end + pcm_pos for c in range(cycles + 1) if 0 <= c * end + pcm_pos <= cycles * end]
+        for S in sounds:  # 鳴らす時刻（0 の分は呼び出し側が最初に置く）
+            if not forever:
+                S.ticks = {S.off_t} if 0 < S.off_t < end else set()
+            elif S.once:  # 1 回だけ：鳴らす周にだけ置く（ほかの周の予算から鳴らす時間を引かない）
+                S.ticks = {S.off_t} if 0 < S.off_t <= cycles * end else set()
+            else:  # 毎周、同じ時刻に「鳴らすかどうか」を調べる
+                S.ticks = {c * end + S.pos for c in range(cycles + 1) if 0 < c * end + S.pos <= cycles * end}
         head, body, tail, order, expected, info = schedule(d_layers, end, a, clock, s_layers, boundaries,
-                                                           [t for t in pcm_ticks if t > 0] if counted else pcm_ticks,
                                                            key_check=forever and exit_key != "none",
-                                                           pcm_code=pcm_code if counted else None)
+                                                           sounds=sounds, counted=forever)
 
         if forever:  # 区切りの状態が前の区切りと同じになった所から先がくり返し
             # コマ数が奇数だと、周ごとに表示している側（2 か所）が入れ替わるので、2 単位で元に戻ることもある
@@ -1338,7 +1414,7 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
         parts.append([lab, f"{lab}.spr"])
     for lab, data in order:
         (out / f"{lab}.cel").write_bytes(data)
-    parts += ([["pcm", "pcm.dat"]] if pcm else []) + [[lab, f"{lab}.cel"] for lab, _ in order]
+    parts += ([["pcm", "pcm.dat"]] if pcm else []) + [list(x) for x in zm_parts] + [[lab, f"{lab}.cel"] for lab, _ in order]
     # 一定時間ごとの補正（VWADJ）：予定の時刻が adj_every カウント進むごとに adj_delta カウント足す
     adj_every = round(float(a["adjust_every"]) * animcommon.VSYNC_HZ) if a.get("adjust_every") is not None else 0
     adj_delta = int(a.get("adjust_frames") or 0)
@@ -1361,11 +1437,17 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
         ensure_ascii=False, indent=1), encoding="utf-8")
 
     timelog = a.get("timelog", False)
-    if counted:  # 周のカウンタを用意し、最初の周の頭で鳴らすかを調べる
-        pcmp = [f"\tSETR\t{pcm_c0}", "\tWTRL\tpcm_cnt\t\t\t* 最初に鳴らすのは何周目か"]
-        pcmp += pcm_code("s") if pcm_pos == 0 else []
-    else:
-        pcmp = ["\tPCMP\tpcm,pcm_end-pcm\t\t* 音"] if (pcm and 0 in pcm_ticks) else []
+    pcmp = []  # 頭で鳴らす音
+    zm_pre = []  # 頭で鳴らす FM 音源の曲（ZMPL は常駐のしかたによっては重い（10MHz で約 118ms）ので、タイマーの基準より前に置く）
+    for S in sounds:
+        dst = zm_pre if (S.key == "fm" and S.off_t == 0) else pcmp
+        if forever:  # 周のカウンタを用意し、最初の周の頭で鳴らすかを調べる
+            dst += [f"\tSETR\t{S.c0}", f"\tWTRL\t{S.key}_cnt\t\t\t* {S.what}：最初に鳴らすのは何周目か"]
+            dst += S.code("s") if S.pos == 0 else []
+        elif S.off_t == 0:
+            dst += list(S.play)
+    zm = any(S.key != "pcm" for S in sounds)
+    stop_snd = (["\tPCMS\t\t\t\t* 音を止める"] if pcm else []) + (["\tZMST\t\t\t\t* FM 音源を止める"] if zm else [])
     L_ = [f"* {name}.s : mkscene.py が自動生成（{', '.join(f'{L.name}={L.plane} {L.n}枚' for L in layers)}、"
           f"{'1 周 ' if forever else ''}{end} カウント）", "", "\t.include\tsch.h", "",
           "\tTMON",
@@ -1386,9 +1468,13 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
                "\tSPCG\t0,bgtile\t\t* BG のタイル",
                f"\tMOVW\t${ctrl:04X},$EB0808\t\t* BG の表示とマップの場所"]
     L_ += head
+    for v in zm_voices:
+        L_.append(f"\tZMVS\t{v}\t\t\t* 効果音の音色を登録する")
     if b_layers:
         L_.append("\tOR_R\t$40\t\t\t* BG／スプライトを表示（$E82601 の bit6）")
-    L_ += ["\tWTRB\t$E82601\t\t\t* 画面を元に戻す", "\tTMWA\t1\t\t\t* タイマーの基準"]
+    L_.append("\tWTRB\t$E82601\t\t\t* 画面を元に戻す")
+    L_ += zm_pre  # 頭で鳴らす曲（D7 を使うので、$E82601 を D7 から書き戻した後に置く）
+    L_.append("\tTMWA\t1\t\t\t* タイマーの基準")
     vw = (a.get("wait") or "vwait") == "vwait"
     if vw:  # 待ちを VWAIT（予定の時刻で待つ）にする。遅れたコマの分を後の待ちで取り戻す
         L_.append(animcommon.VWAIT_INIT)
@@ -1408,25 +1494,26 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
         L_ += [f"* ---- ループの本体（{per} 周。キーが押されるまでくり返す）----", "loop:"]
         L_ += with_key_checks(loop_body, exit_key)
         L_ += ["\tGOTO\tloop", "quit:"]
-        if pcm:  # キーで終えたときは EXIT で終わるので、音は自分で止める（ESC のときは panic.x が止める）
-            L_.append("\tPCMS\t\t\t\t* 音を止める")
+        L_ += stop_snd  # 音を止める（キーで終えたときは EXIT で終わるので自分で止める。ESC のとき ADPCM は panic.x が止める）
         if timelog:
             L_.append("\tBSUB\ttl_t1")
         L_ += ["\tDEND", "\tEXIT"]
-        if counted:
-            L_ += ["", "\t.even", "pcm_cnt:\t.dc.l\t0\t\t* 音を鳴らすまでの周の数（実行中に書き換える）"]
+        if sounds:
+            L_ += ["", "\t.even"] + [f"{S.key}_cnt:\t.dc.l\t0\t\t* {S.what}を鳴らすまでの周の数（実行中に書き換える）"
+                                     for S in sounds]
     else:
         L_ += pcmp
         if timelog:
             L_.append("\tBSUB\ttl_t0")
         L_ += body + tail
-        if pcm:  # 絵が終わったら音も止める（音の方が長いとき、終わった後や次のデータまで鳴り続けないように）
-            L_.append("\tPCMS\t\t\t\t* 音を止める")
+        L_ += stop_snd  # 音を止める（キーで終えたときは EXIT で終わるので自分で止める。ESC のとき ADPCM は panic.x が止める）
         if timelog:
             L_.append("\tBSUB\ttl_t1")
         L_ += ["\tDEND", "\tEXIT"]
     if vw:
         L_ = animcommon.with_vwait_head(L_) + animcommon.VWAIT_CODE.split("\n")
+    if zm:
+        L_ = animcommon.with_zmusic_head(L_) + animcommon.ZMUSIC_CODE.split("\n")
     if timelog:
         tlpath = timelog_path(out, name)
         L_ += animcommon.timelog_code(tlpath, nominal if nominal is not None else 0)

@@ -1,0 +1,31 @@
+# FM 音源（Z-MUSIC ver2）の曲と効果音を鳴らす例（pt mkscene samples/fm/fm.toml）
+# 絵は samples/layer1 の素材（setup.bat --samples で作る）。キーが押されるまでくり返す。
+# 再生する前に、X68000（実機・エミュレータ）で Z-MUSIC を常駐させておくこと（例：zmusic\zmsc -n -t0 -w0）。
+
+name = "fmdemo"
+clock = "10mhz"
+loops = 2            # 1 周＝chara（12 枚・12fps）の 2 ループ＝2 秒
+loop = "forever"
+exit_key = "any"
+diff = true
+
+fm = "bgm.zms"       # 曲（MML）。最初に 1 回だけ鳴らし、あとは曲の中の [do]〜[loop] でくり返す
+fm_offset = 0.0
+
+[[se]]
+src = "se.zms"       # 効果音（FM8）。曲のトラック 8（空き）に割り込ませる
+offset = 1.0         # 周の頭から 1 秒の所で
+every = 1            # 毎周鳴らす
+
+[[layer]]
+name = "chara"
+plane = "g0"
+src = "../layer1/chara"
+base = true
+fps = 12
+
+[[layer]]
+name = "bg"
+plane = "g1"
+src = "../layer1/bg"
+loop_ratio = 2.0

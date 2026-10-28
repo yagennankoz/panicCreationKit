@@ -14,7 +14,7 @@ r"""pansim.py : .pan を PC 上で実行するシミュレータ（時間と画�
   - 結果：再生時間（最初の TMWA から最後の TMWA まで＝mkanim の --timelog の T1−T0 に相当）、遅れた TMWA の数。
   - --gif／--png：表示が変わるたびの画面（256x256。G0 を G1 の上に重ね、G0 の色0 は透明）を書き出す。
   扱えないもの：BG スケジューラ、キー入力（IKEY／RTOK／BKEY などは「押されない」として進む）、
-  BSUB などの 68000 ルーチン（時間 0 として飛ばす）。
+  BSUB などの 68000 ルーチン（時間 0 として飛ばす。Z-MUSIC のルーチン（x68/lib/zmusic.s）は仮の時間だけ進める）。
 """
 import argparse
 import struct
@@ -59,6 +59,11 @@ OPS = {
 MOVE_US = 3.3     # MOVW／MOVB／MOVL
 KEY_US = 647.0    # IKEY／RTOK（DOS の _INPOUT を呼ぶので重い）
 SPOF_US = 617.0   # SPOF（pantime.txt の 0.2ms より重い）
+# Z-MUSIC のルーチン（x68/lib/zmusic.s。先頭の印 'PTZ?'）の時間 [us]。10MHz の XM6 で実測：ZMST（m_stop）25.4ms、
+# ZSEP 0.3ms、ZMVS 0.2ms（音色 1 つ）、ZMPL（play_cnv_data だけ）は zmsc -n（初期化なし）の常駐で 1.0ms
+# （ふつうの常駐では約 118ms）。ZMFO は未計測、ZSES は ZSEP と同じとみなす
+ZM_US = {b"PTZP": 1000.0, b"PTZS": 25400.0, b"PTZF": 300.0, b"PTZE": 300.0, b"PTZX": 300.0, b"PTZV": 200.0}
+ZM_NAMES = {b"PTZP": "ZMPL", b"PTZS": "ZMST", b"PTZF": "ZMFO", b"PTZE": "ZSEP", b"PTZX": "ZSES", b"PTZV": "ZMVS"}
 FIXED_MS_10MHZ = {"GWIP": 138.7, "GPWP": 35.1, "TWIP": 34.7, "TPWP": 2.4, "GTOG": 69.1, "GTOT": 340.0}
 
 
@@ -118,6 +123,7 @@ class Sim:
         self.states = []       # TMWA に入る時点の画面（keep_states のとき）
         self.notes = []
         self.pcm = []          # (時刻, 長さ)
+        self.zm = []           # Z-MUSIC の命令（時刻, 名前）
 
     def note(self, msg):
         if msg not in self.notes:
@@ -516,6 +522,11 @@ class Sim:
                 self.vw_acc = 0
             elif name == "BSB1" and self.d[a[0] + 2:a[0] + 6] == b"PTVW":
                 self.vwait(a[1], at)
+            elif name in ("BSUB", "BSB1", "BSB2") and bytes(self.d[a[0] + 2:a[0] + 6]) in ZM_US:
+                mark = bytes(self.d[a[0] + 2:a[0] + 6])  # Z-MUSIC（x68/lib/zmusic.s）：仮の時間だけ進める
+                self.zm.append((self.t, ZM_NAMES[mark]))
+                self.advance(ZM_US[mark] * self.slow)
+                self.note("Z-MUSIC の命令（ZMPL など）は、測った時間（一部は仮の値）だけ進めます（音は鳴らしません）")
             elif name in ("BSUB", "BSB1", "BSB2"):
                 self.note("BSUB など 68000 のルーチンは時間 0 として飛ばしています")
             elif name == "RTOK":

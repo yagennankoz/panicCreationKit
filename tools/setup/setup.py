@@ -1,4 +1,4 @@
-"""setup.py : 使うツール（ffmpeg、run68x、HAS060X、HLK evolution、panic.x／sch.h）を自動でダウンロードして置く
+"""setup.py : 使うツール（ffmpeg、run68x、HAS060X、HLK evolution、panic.x／sch.h、Z-MUSIC）を自動でダウンロードして置く
 
 使い方:  python tools/setup/setup.py [--samples] [--force] [--check]
   （ふつうは一番上の setup.bat から呼ばれる。Python を自分で用意したときは、このファイルを直接動かしてもよい）

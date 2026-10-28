@@ -184,6 +184,24 @@ def with_vwait_head(lines):
     return out
 
 
+# ---- Z-MUSIC：FM 音源の曲・効果音（x68/lib/zmusic.h・zmusic.s。docs/LIBRARY.md）----
+# マクロ ZMPL（曲を頭から）・ZMST（止める）・ZMFO（フェードアウト）・ZSEP／ZSES（効果音を鳴らす／止める）・ZMVS（音色の登録）。
+# Z-MUSIC ver2（ZMSC.X など）が常駐していなければ、どれも何もしない。
+ZMUSIC_HEAD = "\t.include\tzmusic.h\t\t* Z-MUSIC のマクロ（x68/lib/。docs/LIBRARY.md）"
+ZMUSIC_CODE = "\n* ---- Z-MUSIC のルーチン（x68/lib/zmusic.s。EXIT の後、素材より前に置く）----\n\t.include\tzmusic.s"
+
+
+def with_zmusic_head(lines):
+    """.include sch.h の直後に .include zmusic.h を入れる"""
+    out = []
+    for ln in lines:
+        out.append(ln)
+        if ln.startswith("\t.include\tsch.h"):
+            out.append(ZMUSIC_HEAD)
+    assert ZMUSIC_HEAD in out, ".include sch.h が見つかりません"
+    return out
+
+
 def extract_video(video: Path, dst: Path, fps, start=None, duration=None, aspect=None, fit=None):
     """ffmpeg で動画から 256x256 の PNG 連番を切り出す（縦横比を保って縮小し中央を切り出す）。
     aspect（1 ドットの横÷縦）を指定すると、横 256*aspect の範囲を切り出して 256 に縮める。

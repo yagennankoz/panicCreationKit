@@ -59,6 +59,36 @@
              {"from": "pakodocs.Lzh!update.doc", "to": "docs/panic/update.doc"},
              {"from": "pakodocs.Lzh!a_enc.doc", "to": "docs/panic/a_enc.doc"},
              {"from": "pakodocs.Lzh!bpica.doc", "to": "docs/panic/bpica.doc"}]
+  },
+  {
+   "name": "Z-MUSIC",
+   "what": "Z-MUSIC ver2.08（FM 音源のドライバ）：ZMUSIC.X（PC 上で MML → ZMD のコンパイルに使う）、ZMSC.X（再生専用の常駐ドライバ。X68000 で panic より先に常駐させる）、ZP.R（プレイヤー）",
+   "license": "転載可（原作者 Z.Nishikawa さん、作者 MZL さん。http://retropc.net/x68000/software/sound/zmusic/zmusic2/）",
+   "url": "http://retropc.net/x68000/software/sound/zmusic/zmusic2/ZMSC208X.LZH",
+   "sha256": "56733912e484ca0e942537bb564a074f2d477b33cadb03e709fdfe08bb7df19f",
+   "size": 144813,
+   "kind": "lzh",
+   "files": [{"from": "ZMUSIC.X", "to": "x68/zmusic/zmusic.x"}, {"from": "ZMSC.X", "to": "x68/zmusic/zmsc.x"},
+             {"from": "ZP.R", "to": "x68/zmusic/zp.r"}, {"from": "ZMVER_UP.DOC", "to": "x68/zmusic/zmver_up.doc"}]
+  },
+  {
+   "name": "Z-MUSIC マニュアル",
+   "what": "Z-MUSIC ver2.08 のマニュアル（docs/zmusic/。MML は ZM5.MAN、ZMS コマンドは ZM4.MAN、効果音は ZM14.MAN。Shift-JIS）",
+   "license": "転載可（http://retropc.net/x68000/software/sound/zmusic/zmusic2/）",
+   "url": "http://retropc.net/x68000/software/sound/zmusic/zmusic2/ZMSC2MAN.LZH",
+   "sha256": "a77fba1410ca48dda3cd6736a19a8b1507c30bd9b858e317a5fd719659ef02d3",
+   "size": 165782,
+   "kind": "lzh",
+   "files": [{"from": "ZM0.MAN", "to": "docs/zmusic/ZM0.MAN"}, {"from": "ZM1.MAN", "to": "docs/zmusic/ZM1.MAN"},
+             {"from": "ZM2.MAN", "to": "docs/zmusic/ZM2.MAN"}, {"from": "ZM3.MAN", "to": "docs/zmusic/ZM3.MAN"},
+             {"from": "ZM4.MAN", "to": "docs/zmusic/ZM4.MAN"}, {"from": "ZM5.MAN", "to": "docs/zmusic/ZM5.MAN"},
+             {"from": "ZM6.MAN", "to": "docs/zmusic/ZM6.MAN"}, {"from": "ZM7.MAN", "to": "docs/zmusic/ZM7.MAN"},
+             {"from": "ZM8.MAN", "to": "docs/zmusic/ZM8.MAN"}, {"from": "ZM9.MAN", "to": "docs/zmusic/ZM9.MAN"},
+             {"from": "ZM10.MAN", "to": "docs/zmusic/ZM10.MAN"}, {"from": "ZM11.MAN", "to": "docs/zmusic/ZM11.MAN"},
+             {"from": "ZM12.MAN", "to": "docs/zmusic/ZM12.MAN"}, {"from": "ZM13.MAN", "to": "docs/zmusic/ZM13.MAN"},
+             {"from": "ZM14.MAN", "to": "docs/zmusic/ZM14.MAN"}, {"from": "ZM15.MAN", "to": "docs/zmusic/ZM15.MAN"},
+             {"from": "ZM16.MAN", "to": "docs/zmusic/ZM16.MAN"}, {"from": "ZM_END.MAN", "to": "docs/zmusic/ZM_END.MAN"},
+             {"from": "M14_L6.S", "to": "docs/zmusic/M14_L6.S"}, {"from": "M14_L11.S", "to": "docs/zmusic/M14_L11.S"}]
   }
  ],
  "samples": [
