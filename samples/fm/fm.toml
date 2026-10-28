@@ -1,5 +1,6 @@
 # FM 音源（Z-MUSIC ver2）の曲と効果音を鳴らす例（pt mkscene samples/fm/fm.toml）
 # 絵は samples/layer1 の素材（setup.bat --samples で作る）。キーが押されるまでくり返す。
+# MML の書き方・ファイルの指定のしかた・効果音の決まりは docs/MANUAL.md の 8 章。
 # 再生する前に、X68000（実機・エミュレータ）で Z-MUSIC を常駐させておくこと（例：zmusic\zmsc -n -t0 -w0）。
 
 name = "fmdemo"
