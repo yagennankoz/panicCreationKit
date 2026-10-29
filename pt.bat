@@ -1,5 +1,5 @@
 @echo off
-rem pt.bat : run a panicCreationKitForWin tool with the portable Python (runtime\python)
+rem pt.bat : run a panicCreationKit tool with the portable Python (runtime\python)
 rem   pt <tool> [args...]   e.g.  pt mkscene samples\layer1\scene4.toml
 rem   pt                    lists the tools
 setlocal

@@ -1,0 +1,7 @@
+#!/bin/sh
+# pt : panicCreationKit のツールを動かす（Linux・mac 用。Windows は pt.bat）
+#   ./pt <ツール> [引数…]   例：./pt mkscene samples/layer1/scene4.toml
+#   ./pt                   ツールの一覧
+# Python 3.11 以上を使う（環境変数 PYTHON で指定できる。既定は python3）。
+here=$(cd "$(dirname "$0")" && pwd)
+exec "${PYTHON:-python3}" "$here/tools/pt.py" "$@"

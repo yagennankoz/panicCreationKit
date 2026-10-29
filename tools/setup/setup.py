@@ -1,7 +1,7 @@
 """setup.py : 使うツール（ffmpeg、run68x、HAS060X、HLK evolution、panic.x／sch.h、Z-MUSIC）を自動でダウンロードして置く
 
 使い方:  python tools/setup/setup.py [--samples] [--force] [--check]
-  （ふつうは一番上の setup.bat から呼ばれる。Python を自分で用意したときは、このファイルを直接動かしてもよい）
+  （ふつうは一番上の setup.bat（Windows）か setup.sh（Linux・mac）から呼ばれる。このファイルを直接動かしてもよい）
 
   --samples  サンプルの素材も用意する（テストアニメの PNG を作り、Big Buck Bunny 10 秒をダウンロードする）
   --force    すでに置いてあっても、ダウンロードし直す
@@ -9,6 +9,9 @@
 
   何をどこから取るかは tools/setup/deps.json（版と SHA-256 を固定）。ダウンロードした物は runtime/downloads/ に残し、
   2 回目からはそれを使う（SHA-256 が合えば）。プロキシは環境変数 HTTPS_PROXY／HTTP_PROXY に従う。
+  Windows 用のプログラム（deps.json の platform が windows：ffmpeg、run68x）は、Windows 以外ではダウンロードせず、
+  手元にあるか（PATH、環境変数 FFMPEG・RUN68）を調べて、無ければ入れ方を表示する。
+  platform が posix のもの（アセンブラ HAS v3.09・リンカ HLK v3.01）は、Windows 以外のときだけダウンロードする。
 """
 import hashlib
 import io
@@ -19,11 +22,16 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+if sys.version_info < (3, 11):  # tomllib などを使う
+    sys.exit(f"エラー：Python 3.11 以上が要ります（今は {sys.version.split()[0]}）。"
+             "Linux・mac では、環境変数 PYTHON に Python 3.11 以上の場所を書けます")
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 import lha  # noqa: E402
+import paths  # noqa: E402
 
 CACHE = ROOT / "runtime" / "downloads"
 
@@ -43,7 +51,7 @@ def download(dep, force):
             return data
     size = dep.get("size")
     print(f"  ダウンロード：{dep['url']}" + (f"（{size / 1e6:.1f}MB）" if size else ""))
-    req = urllib.request.Request(dep["url"], headers={"User-Agent": "panicCreationKitForWin-setup"})
+    req = urllib.request.Request(dep["url"], headers={"User-Agent": "panicCreationKit-setup"})
     buf = io.BytesIO()
     with urllib.request.urlopen(req, timeout=60) as r:
         total = int(r.headers.get("Content-Length") or 0)
@@ -102,6 +110,16 @@ def have(dep):
 def install(deps, force, check):
     missing = []
     for dep in deps:
+        if dep.get("platform") == "posix" and paths.WINDOWS:  # Linux・mac 用（HAS v3.09・HLK v3.01）：Windows では要らない
+            continue
+        if dep.get("platform") == "windows" and not paths.WINDOWS:  # Windows 用のプログラム：自分で入れたものを探す
+            where = getattr(paths, dep["find"])()
+            ok = Path(where).is_file()
+            print(f"■ {dep['name']}：{dep['what']}" + (f"（あり：{where}）" if ok else "（ありません）"))
+            if not ok:
+                print(f"    → {dep['other']}")
+                missing.append(dep["name"])
+            continue
         ok = have(dep)
         print(f"■ {dep['name']}：{dep['what']}" + ("（あり）" if ok and not force else ""))
         if check:
@@ -125,7 +143,7 @@ def make_samples():
 def main(argv):
     force, check = "--force" in argv, "--check" in argv
     m = json.loads((HERE / "deps.json").read_text(encoding="utf-8"))
-    print(f"panicCreationKitForWin のセットアップ（{ROOT}）")
+    print(f"panicCreationKit のセットアップ（{ROOT}）")
     missing = install(m["deps"], force, check)
     if "--samples" in argv:
         missing += install(m["samples"], force, check)
@@ -140,7 +158,8 @@ def main(argv):
     if missing:
         print("足りないもの：" + "、".join(missing))
         return 1
-    print("そろいました。使い方は docs/MANUAL.md（例：pt mkanim samples\\anim2 test1 --diff）")
+    ex = "pt mkanim samples\\anim2 test1 --diff" if paths.WINDOWS else "./pt mkanim samples/anim2 test1 --diff"
+    print(f"そろいました。使い方は docs/MANUAL.md（例：{ex}）")
     return 0
 
 

@@ -1,4 +1,4 @@
-"""pt.py : ツールを名前で呼ぶ入口（pt.bat から使う）
+"""pt.py : ツールを名前で呼ぶ入口（Windows は pt.bat、Linux・mac は pt から使う）
 
 使い方:  pt <ツール> [引数…]      例：pt mkscene samples\\layer1\\scene4.toml
         pt                       ツールの一覧
@@ -6,6 +6,10 @@
 import runpy
 import sys
 from pathlib import Path
+
+if sys.version_info < (3, 11):  # tomllib などを使う
+    sys.exit(f"エラー：Python 3.11 以上が要ります（今は {sys.version.split()[0]}）。"
+             "Linux・mac では、環境変数 PYTHON に Python 3.11 以上の場所を書けます")
 
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))  # 埋め込み版の Python は、スクリプトのフォルダを sys.path に入れないため

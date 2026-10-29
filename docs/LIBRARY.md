@@ -1,7 +1,7 @@
-# panicCreationKitForWin のライブラリ（x68/lib/）と VWAIT
+# panicCreationKit のライブラリ（x68/lib/）と VWAIT
 
 panic のスケジュール（.s）には、68000 のルーチンを書いて `BSUB`／`BSB1`／`BSB2` で呼び出せます。
-panicCreationKitForWin では、こうした独自の拡張を **`x68/lib/` のライブラリ**としてまとめ、どの .s からも `.include` するだけで使えるようにしています。
+panicCreationKit では、こうした独自の拡張を **`x68/lib/` のライブラリ**としてまとめ、どの .s からも `.include` するだけで使えるようにしています。
 
 この文書には次のことを書きます。
 

@@ -1,6 +1,6 @@
-# panicCreationKitForWin — X68000 ぱにっく データ制作ツール（Windows 版）
+# panicCreationKit — X68000 ぱにっく データ制作ツール（Windows/Linux/mac 版）
 
-Windows 上の素材（PNG 連番・動画・音声）から、X68000 用アニメーション再生システム
+PC（Windows・Linux・mac）上の素材（PNG 連番・動画・音声）から、X68000 用アニメーション再生システム
 **ぱにっく**（panic.x V1.38.01）のデータ（.pan）を作るツール群です。
 
 - PNG 連番や動画 1 本から 1 コマンドで .pan（`mkanim`）
@@ -14,20 +14,21 @@ Windows 上の素材（PNG 連番・動画・音声）から、X68000 用アニ�
 ## 動く環境
 
 - Windows 10／11（64 ビット）、PowerShell（Windows に最初から入っています）
+- Linux・mac でも使えます（Python・ffmpeg・run68 は自分で用意します。下の「Linux・mac で使う」）
 - 最初の準備のときだけインターネット接続（必要なツールを自動でダウンロードします。全部で約 130MB）
 - 作った .pan の確認には、X68000 の実機か X68000 のエミュレータ。エミュレータと ROM は含みません
 
 ## 準備（最初に 1 回）
 
-1. 次のどちらかで、このツールを手に入れて、**短いパスの所**に置く（例 `C:\panicCreationKitForWin`。中で使う run68 が長いパスを扱えないため）
+1. 次のどちらかで、このツールを手に入れて、**短いパスの所**に置く（例 `C:\panicCreationKit`。中で使う run68 が長いパスを扱えないため）
    - **git を使う**：コマンドプロンプトで
      ```
-     git clone https://github.com/yagennankoz/panicCreationKitForWin.git C:\panicCreationKitForWin
+     git clone https://github.com/yagennankoz/panicCreationKit.git C:\panicCreationKit
      ```
    - **git を使わない**：GitHub のページの「Code」→「Download ZIP」でダウンロードする。
      ZIP を右クリック →「プロパティ」で「許可する（ブロックの解除）」にチェックを入れてから展開する
      （しないと、setup.bat を開いたときに Windows の警告が出ることがあります）。
-     展開したフォルダの名前は `panicCreationKitForWin-main` になりますが、そのままでかまいません。
+     展開したフォルダの名前は `panicCreationKit-main` になりますが、そのままでかまいません。
 2. **`setup.bat` をダブルクリック**する
    - サンプルの素材も用意するなら、コマンドプロンプトで `setup.bat --samples`
 3. 「そろいました」と出たら完了
@@ -35,16 +36,19 @@ Windows 上の素材（PNG 連番・動画・音声）から、X68000 用アニ�
 setup.bat は次のものを自動でダウンロードして、このフォルダの中に置きます（Windows には何もインストールしません）。
 版は固定してあり、ダウンロードした物は SHA-256 で確かめます（`tools/setup/deps.json`）。
 
-| もの                                      | 用途                                   | 置く場所              | 入手元・ライセンス                                |
-| ----------------------------------------- | -------------------------------------- | --------------------- | ------------------------------------------------- |
-| Python 3.13（埋め込み版）、Pillow、numpy  | ツール本体                             | `runtime/python/`     | python.org（PSF）、PyPI                           |
-| ffmpeg 9.0.2                              | 動画・音声の読み込み                   | `runtime/ffmpeg/`     | gyan.dev のビルド（GPL v3）                       |
-| run68x 2.3.2                              | X68000 のプログラムを Windows で動かす | `runtime/run68/`      | github.com/kg68k/run68x（GPL v2）                 |
-| HAS060X 2.0.3                             | X68000 のアセンブラ                    | `x68/bin/`            | github.com/kg68k/has060xx（HAS060.X の配布規定）  |
-| HLK evolution 3.01+18                     | X68000 のリンカ                        | `x68/bin/`            | github.com/kg68k/hlk-ev（転載可）                 |
-| panic.x V1.38.01、sch.h、付属ドキュメント | panic の再生器とマクロ、説明書         | `x68/`、`docs/panic/` | retropc.net（PAN13801.LZH。利用・配布・改造自由） |
-| Z-MUSIC ver2.08（ZMUSIC.X、ZMSC.X、ZP.R）、マニュアル | FM 音源のドライバ（MML のコンパイルと再生） | `x68/zmusic/`、`docs/zmusic/` | retropc.net（ZMSC208X.LZH・ZMSC2MAN.LZH。原作者 Z.Nishikawa さん、作者 MZL さん。転載可） |
-| Big Buck Bunny 10 秒（360p、約 1MB）※     | 動画のサンプル（`samples/bbb/bbb.toml`） | `samples/bbb/`        | test-videos.co.uk（CC BY 3.0、(c) Blender Foundation / www.bigbuckbunny.org） |
+| もの                                                  | 用途                                         | 置く場所                      | 入手元・ライセンス                                                                        |
+| ----------------------------------------------------- | -------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------- |
+| Python 3.13（埋め込み版）、Pillow、numpy              | ツール本体                                   | `runtime/python/`             | python.org（PSF）、PyPI                                                                   |
+| ffmpeg 9.0.2                                          | 動画・音声の読み込み                         | `runtime/ffmpeg/`             | gyan.dev のビルド（GPL v3）                                                               |
+| run68x 2.3.2                                          | X68000 のプログラムを Windows で動かす       | `runtime/run68/`              | github.com/kg68k/run68x（GPL v2）                                                         |
+| HAS060X 2.0.3                                         | X68000 のアセンブラ                          | `x68/bin/`                    | github.com/kg68k/has060xx（HAS060.X の配布規定）                                          |
+| HLK evolution 3.01+18                                 | X68000 のリンカ                              | `x68/bin/`                    | github.com/kg68k/hlk-ev（転載可）                                                         |
+| HAS v3.09、HLK v3.01 ※2                               | X68000 のアセンブラとリンカ（Linux・mac 用） | `x68/bin/`                    | retropc.net（has309.lzh：Y.Nakamura さん、HLK301B.LZH：SALT さん。転載可）                |
+| panic.x V1.38.01、sch.h、付属ドキュメント             | panic の再生器とマクロ、説明書               | `x68/`、`docs/panic/`         | retropc.net（PAN13801.LZH。利用・配布・改造自由）                                         |
+| Z-MUSIC ver2.08（ZMUSIC.X、ZMSC.X、ZP.R）、マニュアル | FM 音源のドライバ（MML のコンパイルと再生）  | `x68/zmusic/`、`docs/zmusic/` | retropc.net（ZMSC208X.LZH・ZMSC2MAN.LZH。原作者 Z.Nishikawa さん、作者 MZL さん。転載可） |
+| Big Buck Bunny 10 秒（360p、約 1MB）※                 | 動画のサンプル（`samples/bbb/bbb.toml`）     | `samples/bbb/`                | test-videos.co.uk（CC BY 3.0、(c) Blender Foundation / www.bigbuckbunny.org）             |
+
+※2 Linux・mac（`setup.sh`）のときだけダウンロードします。Windows では、Python・ffmpeg・run68x・HAS060X・HLK evolution を使います。
 
 ※ `setup.bat --samples` で準備したときだけダウンロードします。`--samples` を付けないときは入りません。
 `--samples` で用意するもう 1 つのサンプル（テストアニメの PNG）は、ダウンロードせずにその場で作ります。
@@ -62,6 +66,18 @@ Big Buck Bunny から作った .pan を配るときは、CC BY 3.0 に従って�
 **自分の（インストール済みの）Python を使う場合**：ツールは `pt` で動かすと、setup.bat が用意した Python（`runtime\python\`）を使います。
 `python tools\〇〇.py` のように直接動かすと、インストールしてある Python が使われるので、先に `pip install -r requirements.txt`（Pillow、numpy）が必要です。
 ffmpeg などは `python tools\setup\setup.py` で用意できます。くわしくは docs/MANUAL.md の 2 章。
+
+## Linux・mac で使う
+
+`setup.sh` と `pt` を使います。Windows 用のもの（Python の埋め込み版、ffmpeg、run68x）は自動では入らないので、先に用意します。
+
+1. Python 3.11 以上と、`python3 -m pip install -r requirements.txt`（Pillow、numpy）
+2. ffmpeg（音声・動画を使うとき。`apt install ffmpeg`、`brew install ffmpeg` など）
+3. run68 をソースから作って PATH に置く：Linux は [run68x](https://github.com/kg68k/run68x)、mac は [run68mac](https://github.com/yunkya2/run68mac)
+4. `./setup.sh`（サンプルも用意するなら `./setup.sh --samples`）→ 「そろいました」と出れば完了。アセンブラ・リンカは、Linux・mac では HAS v3.09・HLK v3.01 をダウンロードして使います（Windows と同じ .pan ができます）
+5. ツールは `./pt mkanim samples/anim2 test1 --diff` のように動かす
+
+Linux（Ubuntu 22.04）で、Windows と同じ .pan ができることを確かめています。mac は確かめていません。くわしい手順は docs/MANUAL.md の 2 章「Linux・mac で使う」。
 
 ## 使い方（例）
 
@@ -88,7 +104,7 @@ FM 音源を使うデータは、先に `zmusic\zmsc -n -t0 -w0` で Z-MUSIC を
 ## フォルダ
 
 ```
-setup.bat  pt.bat     準備と、ツールの入口
+setup.bat  pt.bat     準備と、ツールの入口（Linux・mac は setup.sh と pt）
 tools/                ツール（Python）。tools/setup/ に準備の仕組み
 x68/                  X68000 側のファイル（エミュレータで共有する所）
   anim/                 作った .pan の出力先
@@ -115,4 +131,4 @@ runtime/              setup.bat がダウンロードした物（Python、ffmpeg
 ## 作者・入手先
 
 - 作者：yagennankoz
-- 最新版：https://github.com/yagennankoz/panicCreationKitForWin
+- 最新版：https://github.com/yagennankoz/panicCreationKit

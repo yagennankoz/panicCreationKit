@@ -1,4 +1,4 @@
-﻿# bootstrap.ps1 : panicCreationKitForWin の最初の準備（setup.bat から呼ばれる）
+﻿# bootstrap.ps1 : panicCreationKit の最初の準備（setup.bat から呼ばれる）
 #  1. 持ち運べる Python（埋め込み版）を runtime\python にダウンロードして展開する（Windows に Python が無くてよい）
 #  2. pip と、ツールが使う Python のパッケージ（requirements.txt：Pillow、numpy）を入れる
 #  3. tools\setup\setup.py で、ffmpeg・run68x・HAS060X・HLK evolution・panic.x などをダウンロードする
@@ -25,7 +25,7 @@ $PySha256 = "9e35319bffedab8b36ad44d8f377cb4f1733bcec257a0b6d04d94f01486ddb38"
 function Get-File($Url, $Path) {
     Write-Host "  ダウンロード：$Url"
     $wc = New-Object Net.WebClient
-    $wc.Headers.Add("User-Agent", "panicCreationKitForWin-setup")
+    $wc.Headers.Add("User-Agent", "panicCreationKit-setup")
     $wc.DownloadFile($Url, $Path)
 }
 

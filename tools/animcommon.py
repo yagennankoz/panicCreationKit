@@ -156,7 +156,7 @@ def timelog_code(tlpath, expect):
 # すでに過ぎていたら次の V-Sync まで待つだけ（画面の乱れを防ぐ）で、遅れは予定の時刻に対して残るので、後の待ちが短くなって取り戻す。
 # 待っている間も ESC の印（$2E0(A6)）を見て、立っていればすぐ戻る（panic.x は命令ごとに ESC を調べる）。
 # 先頭の 'PTVI'／'PTVW' は pansim が見分けるための印。
-# ルーチンの本体とマクロは x68/lib/vwait.s・vwait.h（panicCreationKitForWin のライブラリ。docs/LIBRARY.md）。
+# ルーチンの本体とマクロは x68/lib/vwait.s・vwait.h（panicCreationKit のライブラリ。docs/LIBRARY.md）。
 # buildPan.py が x68/lib/ のファイルを作業フォルダに写すので、.s からは .include するだけでよい。
 VWAIT_HEAD = "\t.include\tvwait.h\t\t* VWAIT のマクロ（x68/lib/。docs/LIBRARY.md）"
 VWAIT_INIT = "\tVWINIT\t\t\t\t* VWAIT の基準の時刻（ここから予定の時刻を数える）"

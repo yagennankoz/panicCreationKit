@@ -1,4 +1,4 @@
-* zmusic.h  Z-MUSIC ver2 の FM 音源の曲・効果音を鳴らす／止める  panicCreationKitForWin のライブラリ
+* zmusic.h  Z-MUSIC ver2 の FM 音源の曲・効果音を鳴らす／止める  panicCreationKit のライブラリ
 *
 * 使い方（くわしくは docs/LIBRARY.md）：
 *	.include	sch.h

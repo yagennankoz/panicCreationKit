@@ -1,9 +1,12 @@
 {
- "_説明": "setup.py が自動でダウンロードするもの。url から取り、sha256 を確かめてから files の中身を to の場所に置く（to はこのリポジトリの一番上からの相対）。from の「書庫!中のファイル」は、書庫の中の書庫から取り出す（LZH だけ）。版を上げるときは url・sha256・size を書き換える。",
+ "_説明": "setup.py が自動でダウンロードするもの（platform が windows のものは Windows のときだけ。ほかの OS では find のプログラムがあるかを調べ、無ければ other を案内する。platform が posix のものは Windows 以外のときだけ）。url から取り、sha256 を確かめてから files の中身を to の場所に置く（to はこのリポジトリの一番上からの相対）。from の「書庫!中のファイル」は、書庫の中の書庫から取り出す（LZH だけ）。版を上げるときは url・sha256・size を書き換える。",
  "deps": [
   {
    "name": "ffmpeg",
-   "what": "動画の切り出し、音声の読み込み（ffmpeg 9.0.2 essentials、Gyan Doshi のビルド）",
+   "platform": "windows",
+   "find": "ffmpeg",
+   "other": "Linux は apt install ffmpeg など、mac は brew install ffmpeg。PATH に置くか、環境変数 FFMPEG に場所を書く",
+   "what": "動画の切り出し、音声の読み込み（Windows では ffmpeg 9.0.2 essentials、Gyan Doshi のビルドをダウンロード）",
    "license": "GPL v3（https://www.gyan.dev/ffmpeg/builds/）",
    "url": "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip",
    "sha256": "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba",
@@ -14,7 +17,10 @@
   },
   {
    "name": "run68x",
-   "what": "X68000 の .x を Windows で動かす（HAS060X／HLK を動かすのに使う）",
+   "platform": "windows",
+   "find": "run68",
+   "other": "Linux は run68x（https://github.com/kg68k/run68x）、mac は run68mac（https://github.com/yunkya2/run68mac）を cmake でビルドし、PATH に置くか、環境変数 RUN68 に場所を書く（docs/MANUAL.md の 2 章）",
+   "what": "X68000 の .x を PC で動かす（HAS060X／HLK などを動かすのに使う。Windows では run68x 2.3.2 をダウンロード）",
    "license": "GPL v2（https://github.com/kg68k/run68x）",
    "url": "https://github.com/kg68k/run68x/releases/download/v2.3.2/run68x-v2.3.2-win-x64.zip",
    "sha256": "96a92c4e17767abb0e6cf55f4027410c01365bdcebf8ac26ad07c0ab72eb833e",
@@ -41,6 +47,28 @@
    "size": 24986,
    "kind": "zip",
    "files": [{"from": "hlk.r", "to": "x68/bin/hlk.r"}, {"from": "hlkev.txt", "to": "x68/bin/hlkev.txt"}]
+  },
+  {
+   "name": "HAS v3.09",
+   "platform": "posix",
+   "what": "X68000 のアセンブラ（Linux・mac 用。run68mac でも動く。HAS060X と同じ .o を作る）",
+   "license": "転載可（作者 Y.Nakamura さん。http://retropc.net/x68000/software/develop/as/has/）",
+   "url": "http://retropc.net/x68000/software/develop/as/has/has309.lzh",
+   "sha256": "3378cc3cdb46c50b6e0a489b68b159c6545df4f06ebec3e8e2848d99c9f2c1e0",
+   "size": 54294,
+   "kind": "lzh",
+   "files": [{"from": "HAS.X", "to": "x68/bin/has.x"}, {"from": "README.DOC", "to": "x68/bin/has_README.DOC"}]
+  },
+  {
+   "name": "HLK v3.01",
+   "platform": "posix",
+   "what": "X68000 のリンカ（Linux・mac 用。run68mac でも動く。HLK evolution と同じ .x を作る）",
+   "license": "転載可（作者 SALT さん。http://retropc.net/x68000/software/develop/lk/hlk/）",
+   "url": "http://retropc.net/x68000/software/develop/lk/hlk/HLK301B.LZH",
+   "sha256": "447438f1c52f03c967c09fe3a18416c308f8b61cdb27666458511133d8558979",
+   "size": 22189,
+   "kind": "lzh",
+   "files": [{"from": "hlk301.x", "to": "x68/bin/hlk.x"}, {"from": "readme.doc", "to": "x68/bin/hlk_readme.doc"}]
   },
   {
    "name": "panic",

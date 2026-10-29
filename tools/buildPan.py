@@ -17,7 +17,8 @@
     run68 上の HAS／HLK は、プログラムのパスや 65 文字を超えるカレントを扱えないため。できた .pan はソースと同じフォルダに書く。
   - ソースは Shift-JIS・CRLF で書くこと。
   - run68・アセンブラ・リンカの場所は tools/paths.py で探す（環境変数 RUN68／PANTOOL_HAS／PANTOOL_HLK →
-    setup で置いた runtime/run68/run68.exe、x68/bin/has060x.x（HAS060X）、x68/bin/hlk.r（HLK evolution）→ C:\\tools の下）。
+    setup で置いた runtime/run68/run68.exe、x68/bin/has060x.x（HAS060X）、x68/bin/hlk.r（HLK evolution）→ PATH → C:\\tools の下）。
+    Linux・mac では run68 を自分でビルドして PATH に置く（docs/MANUAL.md の 2 章「Linux・mac で使う」）。
 """
 import os
 import shutil
@@ -28,7 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 X68 = ROOT / "x68"
-LIB = X68 / "lib"  # panicCreationKitForWin のライブラリ（docs/LIBRARY.md）
+LIB = X68 / "lib"  # panicCreationKit のライブラリ（docs/LIBRARY.md）
 BIN = X68 / "bin"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
@@ -37,15 +38,70 @@ RUN68 = paths.run68()
 from mkpan import x_to_pan  # noqa: E402
 
 
-def run(args, cwd):
+RUN68_TIMEOUT = 600  # run68 で動かす 1 つのプログラムの時間の上限 [秒]（run68mac はエラーのとき入力待ちのまま終わらないため）
+
+
+def need_run68():
     if not Path(RUN68).is_file():
-        raise SystemExit(f"run68 が見つかりません（{RUN68}）。setup.bat を実行するか、環境変数 RUN68 に run68.exe の場所を書いてください")
-    r = subprocess.run([RUN68, *map(str, args)], cwd=cwd, capture_output=True)
-    out = (r.stdout + r.stderr).decode("cp932", errors="replace").strip()
+        if paths.WINDOWS:
+            raise SystemExit(f"run68 が見つかりません（{RUN68}）。setup.bat を実行するか、環境変数 RUN68 に run68.exe の場所を書いてください")
+        raise SystemExit("run68 が見つかりません。run68x（Linux）か run68mac（mac）をビルドして PATH に置くか、"
+                         "環境変数 RUN68 に場所を書いてください（docs/MANUAL.md の 2 章「Linux・mac で使う」）")
+
+
+def decode(b: bytes) -> str:
+    """X68000 のプログラムの表示を文字にする（run68x は Shift-JIS のまま、run68mac は UTF-8 に変えて出す）"""
+    try:
+        return b.decode("utf-8")
+    except UnicodeDecodeError:
+        return b.decode("cp932", errors="replace")
+
+
+def run68(args, cwd):
+    """run68 で X68000 のプログラムを動かし、(終了コード, 表示) を返す。
+    入力は空にし、時間の上限を付ける。run68mac はエラーのときデバッガの入力待ち（"(run68)" を出し続ける）になるので、
+    その印が出たらすぐ止めてエラーにする"""
+    import threading
+    import time
+    need_run68()
+    p = subprocess.Popen([RUN68, *map(str, args)], cwd=cwd, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    buf = bytearray()
+
+    def reader():
+        for chunk in iter(lambda: p.stdout.read1(4096), b""):
+            buf.extend(chunk)
+
+    th = threading.Thread(target=reader, daemon=True)
+    th.start()
+    t0 = time.monotonic()
+    why = None
+    while p.poll() is None:
+        if b"(run68)" in buf:
+            why = "run68 がエラーで止まり、入力を待っています"
+        elif time.monotonic() - t0 > RUN68_TIMEOUT:
+            why = f"run68 が {RUN68_TIMEOUT} 秒たっても終わりません"
+        if why:
+            p.kill()
+            p.wait()
+            th.join(1)
+            hint = ("（run68mac は、HAS060X・HLK evolution を動かせません。setup.sh が置く HAS v3.09（x68/bin/has.x）・"
+                    "HLK v3.01（x68/bin/hlk.x）を使ってください。環境変数 PANTOOL_HAS・PANTOOL_HLK を消すか、そちらを指す。docs/MANUAL.md の 2 章）"
+                    if any(n in " ".join(map(str, args)) for n in ("has060x", "hlk.r")) else "")
+            raise SystemExit(f"{why}：{' '.join(map(str, args))}{hint}\n  表示の頭：\n"
+                             + decode(bytes(buf))[:1200])
+        time.sleep(0.05)
+    th.join()
+    return p.returncode, decode(bytes(buf))
+
+
+def run(args, cwd):
+    rc, out = run68(args, cwd)
+    out = out.strip()
     if out:
         print(out)
-    if r.returncode != 0:
-        raise SystemExit(f"失敗しました（終了コード {r.returncode}）: {' '.join(map(str, args))}")
+    if rc != 0:
+        raise SystemExit(f"失敗しました（終了コード {rc}）: {' '.join(map(str, args))}")
 
 
 def blk(blk_file):
@@ -73,13 +129,13 @@ def _short_path(p: Path) -> str:
 
 def work_dir(stem: str) -> Path:
     """ビルドの作業フォルダ。run68 は長いパスを扱えないので、短い所を選ぶ：
-    環境変数 PANTOOL_WORK → x68/work → %LOCALAPPDATA%\\pckwin\\work → TEMP（それぞれ短い名前も試す）"""
+    環境変数 PANTOOL_WORK → x68/work → %LOCALAPPDATA%\\pck\\work → TEMP（それぞれ短い名前も試す）"""
     env = os.environ.get("PANTOOL_WORK")
     bases = [Path(env)] if env else [WORK]
     if not env:
         if os.environ.get("LOCALAPPDATA"):
-            bases.append(Path(os.environ["LOCALAPPDATA"]) / "pckwin" / "work")  # パスを短く（panicCreationKitForWin の略）
-        bases.append(Path(tempfile.gettempdir()) / "pckwin")
+            bases.append(Path(os.environ["LOCALAPPDATA"]) / "pck" / "work")  # パスを短く（panicCreationKit の略）
+        bases.append(Path(tempfile.gettempdir()) / "pck")
     tried = []
     for base in bases:
         base.mkdir(parents=True, exist_ok=True)
@@ -97,13 +153,13 @@ def build(src, objs=(), blob=b""):
     blob：text+data の直後につなげる素材データ（mkpan.x_to_pan を参照）"""
     src = Path(src).resolve()
     if not (X68 / "sch.h").is_file():
-        raise SystemExit(f"sch.h が見つかりません（{X68 / 'sch.h'}）。setup.bat を実行してください")
+        raise SystemExit(f"sch.h が見つかりません（{X68 / 'sch.h'}）。{paths.SETUP} を実行してください")
     cwd = work_dir(src.stem)  # run68 のため、短いパスで作業する
     cwd.mkdir(parents=True, exist_ok=True)
     for f in cwd.iterdir():
         if f.is_file():
             f.unlink()
-    # x68/lib/（panicCreationKitForWin のライブラリ。vwait.h など）を先に写し、ソースのフォルダのもので上書きできるようにする
+    # x68/lib/（panicCreationKit のライブラリ。vwait.h など）を先に写し、ソースのフォルダのもので上書きできるようにする
     for f in (sorted(LIB.glob("*.s")) + sorted(LIB.glob("*.h"))) if LIB.is_dir() else []:
         shutil.copyfile(f, cwd / f.name)
     for f in list(src.parent.glob("*.s")) + list(src.parent.glob("*.h")):  # ソースと、.include するヘッダ
@@ -118,9 +174,9 @@ def build(src, objs=(), blob=b""):
     progs = []
     for prog in (paths.has(), paths.hlk()):
         if not Path(prog).is_file():
-            raise SystemExit(f"{Path(prog).name} が見つかりません（{prog}）。setup.bat を実行してください")
+            raise SystemExit(f"{Path(prog).name} が見つかりません（{prog}）。{paths.SETUP} を実行してください")
         shutil.copyfile(prog, cwd / Path(prog).name)
-        progs.append(".\\" + Path(prog).name)
+        progs.append(paths.here(Path(prog).name))
     run([progs[0], "-u", src.name], cwd)
     run([progs[1], "-x", src.with_suffix(".o").name, *work_objs], cwd)
     xfile = cwd / src.with_suffix(".x").name

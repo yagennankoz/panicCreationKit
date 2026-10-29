@@ -1,4 +1,4 @@
-/ se.zms : FM 音源の効果音のサンプル（panicCreationKitForWin。MIT-0）
+/ se.zms : FM 音源の効果音のサンプル（panicCreationKit。MIT-0）
 / FM8 で鳴らす。曲（bgm.zms）では FM8 を使っていないので、曲のトラック 8 に割り込ませる。
 / 効果音では共通コマンドは音色の定義だけ使える（テンポは書かない。曲のテンポで鳴る）。
 

@@ -22,7 +22,6 @@ r"""mml2zmd.py : Z-MUSIC ver2 の MML（.zms／.opm）を、panic で鳴らす F
 """
 import shutil
 import struct
-import subprocess
 import sys
 from pathlib import Path
 
@@ -63,9 +62,8 @@ def compile_mml(src: Path) -> bytes:
     import buildPan  # run68 の作業フォルダ（短いパス）を使う
     zm = Path(paths.zmusic())
     if not zm.is_file():
-        raise SystemExit(f"ZMUSIC.X が見つかりません（{zm}）。setup.bat を実行してください（Z-MUSIC を x68/zmusic/ に置きます）")
-    if not Path(buildPan.RUN68).is_file():
-        raise SystemExit(f"run68 が見つかりません（{buildPan.RUN68}）。setup.bat を実行してください")
+        raise SystemExit(f"ZMUSIC.X が見つかりません（{zm}）。{paths.SETUP} を実行してください（Z-MUSIC を x68/zmusic/ に置きます）")
+    buildPan.need_run68()
     cwd = buildPan.work_dir("zmc")
     cwd.mkdir(parents=True, exist_ok=True)
     for f in cwd.iterdir():
@@ -75,8 +73,7 @@ def compile_mml(src: Path) -> bytes:
     # 頭に (i)（初期化）を足す。(i) が無いと ZMUSIC.X -c は音量（v・@v）をすべて 0（$B6,$7F）にしてしまう
     # （効果音の MML には (i) を書かないことが多い）。(i) のある曲は、足しても同じ ZMD になる
     (cwd / "mml.zms").write_bytes(b"(i)\r\n" + to_sjis_crlf(src.read_bytes()))
-    r = subprocess.run([buildPan.RUN68, ".\\zmusic.x", "-c", "mml.zms", "mml.zmd"], cwd=cwd, capture_output=True)
-    out = (r.stdout + r.stderr).decode("cp932", "replace")
+    rc, out = buildPan.run68([paths.here("zmusic.x"), "-c", "mml.zms", "mml.zmd"], cwd)
     errs = []
     for ln in out.replace("\x1b[", "\x1b").splitlines():  # エラーの行：「mml.zms<TAB>行<TAB>内容」
         ln = "".join(ch for ch in ln if ch >= " " or ch == "\t")
@@ -85,7 +82,7 @@ def compile_mml(src: Path) -> bytes:
             line = int(f[1]) - 1 if f[1].strip().isdigit() else f[1]  # 足した (i) の 1 行を引く
             errs.append(f"  {src.name} {line} 行目：{' '.join(f[2:]).strip()}")
     zmd = cwd / "mml.zmd"
-    if r.returncode != 0 or not zmd.is_file() or errs:
+    if rc != 0 or not zmd.is_file() or errs:
         msg = f"MML のコンパイルに失敗しました（{src}）"
         if errs:
             msg += "\n" + "\n".join(errs) + "\n  エラーの番号の意味は docs/zmusic/ZM11.MAN"

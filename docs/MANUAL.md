@@ -1,6 +1,6 @@
 # panic データ制作ツール 使い方
 
-Windows 上の素材（PNG 連番・動画・音声）から、X68000 用アニメーション再生システム ぱにっく（panic.x V1.38.01）の
+PC（Windows・Linux・mac）上の素材（PNG 連番・動画・音声）から、X68000 用アニメーション再生システム ぱにっく（panic.x V1.38.01）の
 データ（.pan）を作るツール群の使い方です。目標の対象機は **MPU 10MHz の X68000** です。再生は実機でもエミュレータでもかまいません。
 
 ---
@@ -56,10 +56,55 @@ Windows 上の素材（PNG 連番・動画・音声）から、X68000 用アニ�
 - 再生の確認には、X68000 の実機かエミュレータが要ります（含みません）。エミュレータでは `x68/` を X68000 のドライブとして共有します
   （ホストのフォルダを共有する機能。WindrvXM など。以下の例では H: ドライブ）。実機へは .pan を写して使います。
 
+### Linux・mac で使う
+
+Linux と mac でも使えます。setup.bat の代わりに `setup.sh`、pt.bat の代わりに `pt` を使います。
+ただし、Windows 用のもの（Python の埋め込み版、ffmpeg、run68x）は自動では入らないので、自分で用意します。
+Linux（Ubuntu 22.04）では、Windows と同じ .pan ができることを確かめています。mac は確かめていません。
+
+1. **Python 3.11 以上と、そのパッケージ**を用意します。
+   ```
+   python3 --version                       （3.11 以上か確かめる）
+   python3 -m pip install -r requirements.txt
+   ```
+   `python3` が 3.11 より古いときは、新しい Python の場所を環境変数 `PYTHON` に書きます（例 `export PYTHON=/usr/local/bin/python3.12`）。
+2. **ffmpeg**（音声・動画を使うときだけ）：Linux は `sudo apt install ffmpeg` など、mac は `brew install ffmpeg`。
+3. **run68**（X68000 のプログラムを動かすもの）をソースから作り、PATH の通った所に置きます（または環境変数 `RUN68` に場所を書く）。
+   - Linux：**run68x**（https://github.com/kg68k/run68x ）
+     ```
+     git clone https://github.com/kg68k/run68x.git
+     cd run68x
+     cmake -B build -DCMAKE_BUILD_TYPE=Release
+     cmake --build build                     （build/run68 ができる）
+     ```
+     gcc が古いと（Ubuntu 22.04 の gcc 11 など）、警告でビルドが止まることがあります。そのときは CMakeLists.txt の `-Werror` を消してから作り直します。
+   - mac：**run68mac**（https://github.com/yunkya2/run68mac ）
+     ```
+     brew install cmake libiconv
+     git clone https://github.com/yunkya2/run68mac.git
+     cd run68mac && mkdir build && cd build
+     cmake .. && make && make install        （/usr/local/bin/run68 に入る。sudo が要ることもある）
+     ```
+     run68x を mac で作れれば（作り方は Linux と同じ）、それを使ってもかまいません（確かめていません）。
+4. このフォルダで準備します（アセンブラ・リンカ・panic.x・Z-MUSIC をダウンロードします）。
+   ```
+   ./setup.sh                              （サンプルも用意するなら ./setup.sh --samples）
+   ```
+   最後に「そろいました」と出れば完了です。足りないものがあれば、入れ方を表示します。
+   Linux・mac では、アセンブラとリンカに **HAS v3.09（x68/bin/has.x）** と **HLK v3.01（x68/bin/hlk.x）** を使います
+   （retropc.net から。転載可）。run68x でも run68mac でも動き、Windows で使う HAS060X・HLK evolution と同じ .pan ができます
+   （run68mac は HAS060X・HLK evolution を動かせないため、こちらにしています）。
+5. ツールは `./pt` で動かします。パスの区切りは `/` です。
+   ```
+   ./pt mkanim samples/anim2 test1 --fps 12 --diff
+   ```
+
+このマニュアルのコマンドの例は Windows の書き方（`pt …`、`\` 区切り）です。Linux・mac では `./pt …`、`/` 区切りに読み替えてください。
+
 ### フォルダ
 
 ```
-setup.bat  pt.bat  準備と、ツールの入口
+setup.bat  pt.bat  準備と、ツールの入口（Linux・mac は setup.sh と pt）
 tools/        ツール（Python）。tools/setup/ に準備の仕組み
 x68/          X68000 側のファイル。エミュレータではここを共有する
   anim/<名前>/  作った .pan の既定の出力先
@@ -73,10 +118,10 @@ docs/         このマニュアル、LIBRARY.md（ライブラリと VWAIT）�
 ```
 
 - ビルド（run68 で動かす HAS／HLK）は短いパスの作業フォルダで行います。run68 上の HAS／HLK は長いパスを扱えないため、
-  `x68/work` のパスが 60 文字を超えるときは `%LOCALAPPDATA%\pckwin\work` などを使います。
+  `x68/work` のパスが 60 文字を超えるときは `%LOCALAPPDATA%\pck\work` などを使います。
   それも長いときは、環境変数 `PANTOOL_WORK` に短いフォルダ（例 `C:\ptwork`）を指定してください。
 
-コマンドは `panicCreationKitForWin` のフォルダ（setup.bat のあるフォルダ）で実行します（例：`pt mkanim …`）。
+コマンドは `panicCreationKit` のフォルダ（setup.bat のあるフォルダ）で実行します（例：`pt mkanim …`）。
 
 ---
 
@@ -494,7 +539,9 @@ pt mkscene <設定.toml> [--out フォルダ] [--stop-at-s] [--sim]
 | `gain`                                                                  | 音量の調整 [dB]                                                                                                                                  | 0                                                    |
 | `audio_offset`                                                          | 音を鳴らし始める時刻 [秒]（負なら音の頭を削る）                                                                                                  | 0                                                    |
 | `audio_every`                                                           | 永久ループで何周ごとに鳴らし直すか（0 で最初の 1 回だけ）                                                                                        | 音の長さから自動                                     |
-| `fm`／`fm_offset`／`fm_every`                                           | FM 音源の曲（Z-MUSIC の MML か ZMD）と、鳴らし始める時刻・何周ごとに鳴らし直すか（8.5）                                                          | なし／0／0                                           |
+| `fm`                                                                    | FM 音源の曲のファイル（Z-MUSIC の MML か ZMD。8.5）                                                                                              | なし                                                 |
+| `fm_offset`                                                             | 曲を鳴らし始める時刻 [秒]（0 以上）                                                                                                              | 0                                                    |
+| `fm_every`                                                              | 永久ループで何周ごとに曲を頭から鳴らし直すか（0 で最初の 1 回だけ）                                                                              | 0                                                    |
 | `[[se]]`                                                                | FM 音源の効果音（`src`・`offset`・`every`・`track`。8.5）                                                                                        | なし                                                 |
 | `aspect`／`pixel_aspect`／`fit`／`transparent`／`transparent_tolerance` | 画像の読み込み方（7.8。全層の既定）                                                                                                              | —                                                    |
 | `no_drop`                                                               | 間に合わないコマを飛ばさない                                                                                                                     | false                                                |
@@ -914,7 +961,7 @@ MML は `samples\fm\bgm.zms`（曲）と `samples\fm\se.zms`（効果音）、�
 
 ### 8.4 mkanim で使う
 
-`--fm 曲のファイル` を足すだけです。ファイルのパスは、**コマンドを実行しているフォルダ（ふつうは panicCreationKitForWin のフォルダ）からの相対**か、絶対パスで書きます。
+`--fm 曲のファイル` を足すだけです。ファイルのパスは、**コマンドを実行しているフォルダ（ふつうは panicCreationKit のフォルダ）からの相対**か、絶対パスで書きます。
 
 ```
 pt mkanim samples\anim2 fmtest --diff --forever --fm samples\fm\bgm.zms

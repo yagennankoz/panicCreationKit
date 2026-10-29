@@ -1,4 +1,4 @@
-* timelog.h  時刻の記録：2 か所の時刻（1/100 秒）をファイルに書く  panicCreationKitForWin のライブラリ
+* timelog.h  時刻の記録：2 か所の時刻（1/100 秒）をファイルに書く  panicCreationKit のライブラリ
 *
 * 使い方（くわしくは docs/LIBRARY.md）：
 *	.include	sch.h

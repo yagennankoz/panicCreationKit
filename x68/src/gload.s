@@ -3,7 +3,7 @@
 *           gload          ... 画面モードを元（768x512）に戻す
 *   <file> は 256x256 ドット、1ドット 1ワード（GRB 5:5:5:1、ビッグエンディアン）
 *   計 131072 バイト。tools/make_ref_images.py が作る。
-*   出典：panicCreationKitForWin のために作ったもの（MIT-0。https://github.com/yagennankoz/panicCreationKitForWin）
+*   出典：panicCreationKit のために作ったもの（MIT-0。https://github.com/yagennankoz/panicCreationKit）
 
 _CRTMOD		.equ	$10
 _G_CLR_ON	.equ	$90

@@ -1,4 +1,4 @@
-/ bgm.zms : FM 音源の曲のサンプル（panicCreationKitForWin。MIT-0）
+/ bgm.zms : FM 音源の曲のサンプル（panicCreationKit。MIT-0）
 / トラック 1＝FM1（メロディ）、トラック 2＝FM2（ベース）。[do]〜[loop] で終わりなくくり返す。
 / 効果音（se.zms）は FM8 で鳴らすので、FM8 は空けておく。
 

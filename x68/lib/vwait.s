@@ -1,4 +1,4 @@
-* vwait.s  VWAIT のルーチンの本体（vwait.h のマクロから BSUB／BSB1／BSB2 で呼ばれる）  panicCreationKitForWin のライブラリ
+* vwait.s  VWAIT のルーチンの本体（vwait.h のマクロから BSUB／BSB1／BSB2 で呼ばれる）  panicCreationKit のライブラリ
 *
 * スケジュールの EXIT の後に .include する。panic.x V1.38.01 の作業領域（A6）を使う：
 *   $2C8(A6).w  V-Sync のカウンタ（V-Sync の割り込みで +1。TMWA が 0 に戻して使う）

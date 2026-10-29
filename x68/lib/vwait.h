@@ -1,4 +1,4 @@
-* vwait.h  VWAIT：再生の頭からの「予定の時刻」で待つ（TMWA の代わり）  panicCreationKitForWin のライブラリ
+* vwait.h  VWAIT：再生の頭からの「予定の時刻」で待つ（TMWA の代わり）  panicCreationKit のライブラリ
 *
 * 使い方（くわしくは docs/LIBRARY.md）：
 *	.include	sch.h

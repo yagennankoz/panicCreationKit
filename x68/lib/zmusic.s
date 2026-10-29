@@ -1,4 +1,4 @@
-* zmusic.s  Z-MUSIC ver2 のルーチンの本体（zmusic.h のマクロから BSUB／BSB1／BSB2 で呼ばれる）  panicCreationKitForWin のライブラリ
+* zmusic.s  Z-MUSIC ver2 のルーチンの本体（zmusic.h のマクロから BSUB／BSB1／BSB2 で呼ばれる）  panicCreationKit のライブラリ
 *
 * スケジュールの EXIT の後に .include する。Z-MUSIC ver2 のファンクションコール（trap #3。マニュアル ZM10.MAN）を使う：
 *   $0A m_stop（D2＝D3＝D4＝0 で全トラック）、$11 play_cnv_data（D2＝0：データを転送せず、その場所のまま鳴らす。

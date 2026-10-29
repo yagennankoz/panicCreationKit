@@ -1,4 +1,4 @@
-* timelog.s  時刻の記録のルーチン（timelog.h のマクロ、または BSUB tl_t0／tl_t1 で呼ぶ）  panicCreationKitForWin のライブラリ
+* timelog.s  時刻の記録のルーチン（timelog.h のマクロ、または BSUB tl_t0／tl_t1 で呼ぶ）  panicCreationKit のライブラリ
 *
 * スケジュールの EXIT の後に .include する。使う側で次のラベルを書くこと：
 *   tl_fn       書くファイルの名前（0 で終わる）
