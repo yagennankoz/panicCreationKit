@@ -6,7 +6,7 @@ r"""mkbench.py : ベンチ動画（描画の速さを数える .pan）を設定�
 流れ（できる .pan の動き）:
   1. 導入部分を再生する（[intro]。省略可）
   2. キーが押されるまで待つ
-  3. ベンチ部分（[bench] の PNG 連番、G0）を、待たずに（ノーウェイトで）描いては切り替えることをくり返す
+  3. ベンチ部分（[bench] の画像の連番、G0）を、待たずに（ノーウェイトで）描いては切り替えることをくり返す
      - 1 コマ描いて表示を切り替えるのを 1 ステップと数え、count_every ステップごとにカウントを 1 上げる
      - カウントはテキスト面に数字で表示する（毎回書き直す。字は X68000 の ROM フォント）
      - ループの中の sound_step コマ目で効果音（ADPCM）を鳴らす
@@ -20,13 +20,13 @@ r"""mkbench.py : ベンチ動画（描画の速さを数える .pan）を設定�
   clock = "10mhz"         対象機の MPU クロック（10、16.7 など。導入部分の描画時間の見積もり、ベンチの予想）
   dither／dither_strength／stabilize   減色（mkscene と同じ。全部の絵に共通）
 [intro]（省略可）           導入部分。G0 に 1 枚の層として再生する
-  src = "intro"           PNG 連番のフォルダか動画（設定ファイルからの相対）
+  src = "intro"           画像の連番のフォルダか動画（設定ファイルからの相対）
   fps = 12                1 秒に何コマ（必須）
   diff = true             前フレーム差分（既定 true）
   audio = "intro.wav"     導入部分の音（任意。gain、audio_start、audio_duration も可）
   start／duration／first／count／sequence／hold／aspect／fit／transparent など   mkscene の層と同じ
 [bench]                   ベンチ部分（必須）
-  src = "bench"           PNG 連番のフォルダか動画
+  src = "bench"           画像の連番のフォルダか動画
   seconds = 10            何秒数えるか（既定 10）
   count_every = 1         何ステップごとにカウントを 1 上げるか（既定 1）
   diff = true             前フレーム差分（既定 true。描く先には 2 ステップ前の絵が残っている）
@@ -43,7 +43,7 @@ r"""mkbench.py : ベンチ動画（描画の速さを数える .pan）を設定�
   color = "#FFFFFF"       数字の色
   result_x／result_y／result_scale   結果の画面での位置と大きさ（省略するとベンチ中と同じ）
 [result]（省略可）          結果の画面。省略するとベンチの最後の絵のまま
-  src = "result.png"      静止画（PNG 1 枚、またはそのフォルダ）
+  src = "result.png"      静止画（画像 1 枚、またはそのフォルダ）
   aspect／fit／transparent など
 """
 import json
@@ -133,18 +133,13 @@ def load_layer(sec, cfg, base_dir, out, q):
     lc.update(name=sec, plane="g0", base=True)
     src = Path(lc["src"])
     src = src if src.is_absolute() else base_dir / src
-    if src.is_file() and src.suffix.lower() == ".png":  # PNG 1 枚：フォルダに写して読む（ファイルは動画として扱われるため）
-        import shutil
-        folder = out / f"still_{sec}"
-        folder.mkdir(parents=True, exist_ok=True)
-        for f in folder.glob("*.png"):
-            f.unlink()
-        shutil.copyfile(src, folder / "f0000.png")
-        lc["src"] = str(folder)
+    if animcommon.is_image(src):  # 画像 1 枚：そのまま読む（mkscene の層は画像 1 枚も読める）
+        lc["src"] = str(src)
     lc.setdefault("fps", 1)
     aspect = animcommon.pixel_aspect(cfg.get("aspect", False), cfg.get("pixel_aspect"))
     L = mkscene.Layer(lc, base_dir, out, aspect, cfg.get("fit"),
-                      animcommon.parse_key_colors(cfg.get("transparent")), int(cfg.get("transparent_tolerance", 0)))
+                      animcommon.parse_key_colors(cfg.get("transparent")), cfg.get("transparent_tolerance"),
+                      animcommon.clean_options(cfg))
     pal = a_enc.Palette()
     mkscene.quantize_layer(L, mkscene.make_palette([L]), pal, *q)
     return L, pal

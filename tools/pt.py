@@ -15,7 +15,7 @@ TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))  # 埋め込み版の Python は、スクリプトのフォルダを sys.path に入れないため
 
 MAIN = [  # よく使うもの（一覧の上に出す）
-    ("mkanim", "PNG 連番・動画 1 本から .pan を作る"),
+    ("mkanim", "画像の連番・動画 1 本から .pan を作る"),
     ("mkscene", "層を重ねたアニメを設定ファイルから作る"),
     ("mkbench", "ベンチ動画を作る"),
     ("mkparts", "画像・音声からセル（グラフィック・テキスト・スプライト）・パレット・ADPCM と .s のひな形を作る"),

@@ -1,4 +1,4 @@
-r"""mkanim.py : PNG 連番または動画 1 本から panic の .pan を作る（1 枚の層だけの mkscene）
+r"""mkanim.py : 画像（PNG・JPEG など）の連番または動画 1 本から panic の .pan を作る（1 枚の層だけの mkscene）
 
 使い方:  pt mkanim <PNGフォルダ|動画ファイル> <名前> [オプション]
         pt mkanim --config 設定.toml [オプション]   （設定ファイルの例：samples/bbb/bbb.toml。キーはオプション名）
@@ -37,6 +37,14 @@ r"""mkanim.py : PNG 連番または動画 1 本から panic の .pan を作る�
   --hold 指定      画像ごとの表示時間の既定を変える。例 "5:3,7:0.5s"（画像 5 は 3 コマ分、画像 7 は 0.5 秒）
   --transparent 色  この色のドットを透明（色番号 0）にする。"#FF00FF"、"corner"（各画像の左上 (0,0) の色＝当時の方法）、
              ";" 区切りで複数。--transparent-tolerance N で RGB 各 N までの差を許す（動画など色がゆれる素材用）
+             "auto" で、画像のまわりの色から背景色を自動で決める（許す差も、書いていなければ自動）
+  --transparent-fringe N  透明にしたドットから N ドット以内の、透明色が混ざった色（ふちのにじみ）を直す
+             （混ざり具合が --transparent-cut（既定 0.5）以上なら透明、少なければ近くの内側の色に）
+  --transparent-despill [N]  透明にしたドットから N ドット以内（既定 4）の色のかぶり取り（透明色が混ざった色から元の色を推測して戻す）
+  --transparent-prescale N  動画を 256x256 に縮める前（縦 256×N、1＝元の大きさ）に透明色を抜く（既定 2。0＝縮めた後に抜く。
+             縮める前の方が細い隙間が背景と混ざらずに残る）
+  --flatten T    減色の前に単色のむらを均す（RGB 各の差が T 以内の近くのドットだけで平均。目安 8〜16）
+  --despeckle [T]  減色の後に、まわりと色の近い（差 T 以内、既定 24）1 ドットだけの点を消す
   --split 秒   長い素材を、この長さごとの .pan に分けて作る（<名前>00.pan、<名前>01.pan …、名前は 6 文字まで）。
              出力先（--out、省略すると x68/anim/<名前>/）に全部の .pan と play.bat（ワイルドカードで連続再生）を置く。
              部分ごとにパレットを作り、音もその区間を切り出す。--forever／--loop とは一緒に使えない
@@ -52,6 +60,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import a_enc  # noqa: E402
+import animcommon  # noqa: E402
 import cli  # noqa: E402
 
 # 共通の部品（ほかのツールが mkanim から参照するもの。中身は animcommon）
@@ -99,7 +108,10 @@ def scene_config(a) -> dict:
            "dither_strength": a.dither_strength, "stabilize": a.stabilize, "no_drop": a.no_drop,
            "timelog": a.timelog, "gain": a.gain, "layer": [layer],
            "aspect": a.aspect, "pixel_aspect": a.pixel_aspect, "fit": a.fit,
-           "transparent": a.transparent, "transparent_tolerance": a.transparent_tolerance, "sim": a.sim,
+           "transparent": a.transparent, "transparent_tolerance": a.transparent_tolerance,
+           "transparent_fringe": a.transparent_fringe, "transparent_cut": a.transparent_cut,
+           "transparent_despill": a.transparent_despill, "transparent_prescale": a.transparent_prescale,
+           "flatten": a.flatten, "despeckle": a.despeckle, "sim": a.sim,
            "wait": a.wait, "fixed_cels": not a.no_fixed_cels}
     if a.adjust_every is not None or a.adjust_frames is not None:
         cfg["adjust_every"], cfg["adjust_frames"] = a.adjust_every, a.adjust_frames
@@ -118,7 +130,7 @@ def scene_config(a) -> dict:
     if not a.no_audio:
         if a.audio:
             cfg["audio"] = str(Path(a.audio).resolve())
-        elif Path(a.src).is_file():  # 動画の音を使う（同じ区間）
+        elif Path(a.src).is_file() and not animcommon.is_image(Path(a.src)):  # 動画の音を使う（同じ区間。アニメーション画像には音が無い）
             cfg["audio"] = str(Path(a.src).resolve())
             if a.start is not None:
                 cfg["audio_start"] = a.start
@@ -146,18 +158,21 @@ def build_split(a, argv):
         f.unlink()
     src = Path(a.src).resolve()
     base_cfg = scene_config(a)
-    video = src.is_file()
-    if video:  # 動画は 1 回だけ切り出して、PNG 連番として分ける（縦横比の補正も切り出しで済ませる）
+    video = animcommon.is_moving(src)
+    if video:  # 動画・アニメーション画像は 1 回だけ切り出して、PNG 連番として分ける
         folder = top / "frames"
         aspect = animcommon.pixel_aspect(a.aspect, a.pixel_aspect)
         print(f"動画を切り出しています：{src.name}")
-        animcommon.extract_video(src, folder, a.fps, a.start, a.duration, aspect, a.fit)
-        base_cfg.update(aspect=False, fit="crop")
+        # 透明色を使うときは、縮める前の大きさで切り出す（mkscene の層と同じ。transparent_prescale）
+        pre = (animcommon.PRESCALE_DEFAULT if a.transparent_prescale is None else int(a.transparent_prescale)) \
+            if a.transparent else 0
+        if not animcommon.extract_frames(src, folder, a.fps, a.start, a.duration, aspect, a.fit, raw=pre):
+            base_cfg.update(aspect=False, fit="crop")  # 256x256 に切り出したので、そのまま
     else:
         folder = src
-    n_all = len(sorted(folder.glob("*.png")))
+    n_all = len(animcommon.list_images(folder))
     if not n_all:
-        raise SystemExit(f"{folder} に PNG がありません")
+        raise SystemExit(f"{folder} に画像（PNG・JPEG など）がありません")
     per = max(1, round(a.split * a.fps))
     parts = math.ceil(n_all / per)
     if parts > 100:
@@ -212,8 +227,8 @@ def build_split(a, argv):
 
 
 def main(argv):
-    ap = cli.ArgumentParser(description="PNG 連番または動画から .pan を作る")
-    ap.add_argument("src", type=Path, nargs="?", help="PNG 連番のフォルダ、または動画ファイル")
+    ap = cli.ArgumentParser(description="画像の連番または動画から .pan を作る")
+    ap.add_argument("src", type=Path, nargs="?", help="画像（PNG・JPEG・GIF など）の連番のフォルダ、動画、またはアニメーション GIF")
     ap.add_argument("name", nargs="?")
     ap.add_argument("--config", type=Path, help="設定ファイル（TOML）。コマンドラインの指定が優先")
     ap.add_argument("--fps", type=float, default=12)
@@ -255,8 +270,22 @@ def main(argv):
     ap.add_argument("--fm-offset", type=float, default=0.0, help="曲を鳴らし始める時刻 [秒]")
     ap.add_argument("--fm-every", type=int, default=0, help="永久ループで何周ごとに曲を頭から鳴らし直すか（0＝最初に 1 回だけ）")
     ap.add_argument("--transparent", help="透明にする色。\"#FF00FF\" など、\"corner\"＝各画像の左上 (0,0) の色、"
-                                           "\";\" 区切りで複数")
-    ap.add_argument("--transparent-tolerance", type=int, default=0, help="透明色の許す差（RGB 各 0〜255、既定 0＝ぴったり）")
+                                           "\";\" 区切りで複数、\"auto\"＝まわりの色から自動で決める")
+    ap.add_argument("--transparent-tolerance", type=int,
+                    help="透明色の許す差（RGB 各 0〜255。既定 0＝ぴったり、--transparent auto なら自動で決めた値）")
+    ap.add_argument("--transparent-fringe", type=int, default=0,
+                    help="透明にしたドットから N ドット以内の、透明色が混ざった色を直す（既定 0＝しない。目安 2〜3）")
+    ap.add_argument("--transparent-cut", type=float, default=0.5,
+                    help="ふちのドットを透明にする、透明色の混ざり具合（0〜1、既定 0.5）")
+    ap.add_argument("--transparent-despill", type=int, nargs="?", const=animcommon.DESPILL_DEFAULT, default=0,
+                    help="透明にしたドットから N ドット以内の色のかぶり取り（透明色が混ざった色から元の色を推測。既定 0＝しない、付けると 4）")
+    ap.add_argument("--transparent-prescale", type=int,
+                    help="動画を 256x256 に縮める前（縦 256×N。1＝元の大きさ）に透明色を抜く"
+                         "（既定 2。0＝縮めた後に抜く）")
+    ap.add_argument("--flatten", type=float, default=0.0,
+                    help="減色の前に単色のむらを均す。RGB 各の差が N 以内の近くのドットだけで平均（既定 0＝しない。目安 8〜16）")
+    ap.add_argument("--despeckle", type=float, nargs="?", const=animcommon.DESPECKLE_DEFAULT, default=0,
+                    help="減色の後に、まわりと色の近い 1 ドットの点を消す（数を付けると色の差の上限。既定 24）")
     ap.add_argument("--sequence", help="画像を表示する順番（例 \"0-7,6-1\"、\"0,1,2:3,(3-5)*4\"）")
     ap.add_argument("--hold", help="画像ごとの表示時間（例 \"5:3,7:0.5s\"＝画像 5 は 3 コマ分、画像 7 は 0.5 秒）")
     ap.add_argument("--split", type=float, help="この長さ [秒] ごとの .pan に分けて作る（ワイルドカードで連続再生）")
@@ -268,7 +297,7 @@ def main(argv):
     if a.src is None or a.name is None:
         ap.error("素材（src）と名前（name）を、コマンドラインか設定ファイルで指定してください")
     if not Path(a.src).exists():
-        raise SystemExit(f"素材（PNG のフォルダか動画）が見つかりません：{a.src}")
+        raise SystemExit(f"素材（画像のフォルダか動画）が見つかりません：{a.src}")
     if a.audio is not None:
         cli.need_file(a.audio, "音のファイル（--audio）")
     cli.check_number("オプション", "--fps", a.fps, above=0, maximum=60)

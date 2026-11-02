@@ -97,9 +97,9 @@ pt pansim x68\anim\test1\test1.pan                 PC 上で再生時間と画�
 
 できた .pan は `x68\anim\<名前>\` に入ります（`--out` で変えられます）。
 作り方は、ツールにおまかせする「自動」（mkanim・mkscene）と、スケジュールを自分で書く「手作業」（mkparts＋buildPan）の 2 通りです。
-詳しくは docs/MANUAL.md の 4・5 章を見てください。
+詳しくは docs/MANUAL.md の 4 章と、docs/manual/mkparts.md（手で作る）を見てください。
 エミュレータでは `x68` フォルダを共有し（ホストのフォルダを X68000 のドライブにする機能。WindrvXM など）、X68000 側で `panic anim\test1\test1.pan` のように再生します。
-FM 音源を使うデータは、先に `zmusic\zmsc -n -t0 -w0` で Z-MUSIC を常駐させてから再生します（docs/MANUAL.md の 8 章）。
+FM 音源を使うデータは、先に `zmusic\zmsc -n -t0 -w0` で Z-MUSIC を常駐させてから再生します（docs/manual/fm.md）。
 
 ## フォルダ
 
@@ -112,7 +112,7 @@ x68/                  X68000 側のファイル（エミュレータで共有す
   zmusic/               Z-MUSIC ver2（setup.bat が置く）
   bin/                  X68000 のアセンブラとリンカ（setup.bat が置く）
 samples/              サンプルの設定ファイルと素材
-docs/                 マニュアル（MANUAL.md）。setup が docs/panic/ に panic の付属ドキュメント、docs/zmusic/ に Z-MUSIC のマニュアルを置く
+docs/                 マニュアル（MANUAL.md が入口、manual/ にツールごとの説明）。setup が docs/panic/ に panic の付属ドキュメント、docs/zmusic/ に Z-MUSIC のマニュアルを置く
 runtime/              setup.bat がダウンロードした物（Python、ffmpeg、run68）
 ```
 

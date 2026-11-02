@@ -6,7 +6,7 @@ r"""mkscene.py : 層（グラフィック 0／1、テキスト面、スプライ
   （既定はしない。設定ファイルに sim = true と書いてもよい）。
   例は samples/layer1/scene*.toml、samples/layer1/forever.toml（永久ループ＋キーで終了）。
   --stop-at-s で .s まで作って止め、編集後は pt buildPan x68/anim/<名前>/<名前>.s。
-  1 枚もの（PNG 連番や動画 1 本）は mkanim.py でも作れる（中身はこのファイルの build を呼んでいる）。
+  1 枚もの（画像の連番や動画 1 本）は mkanim.py でも作れる（中身はこのファイルの build を呼んでいる）。
 
 設定ファイル（全体）:
   name = "lay1"           出力名（英数字 8 文字以内）→ <出力先>/<名前>.pan
@@ -54,11 +54,20 @@ r"""mkscene.py : 層（グラフィック 0／1、テキスト面、スプライ
   aspect = true           ドットの縦横比の補正（横を 2/3 に縮める）。pixel_aspect＝1 ドットの横÷縦（既定 1.5）
   fit = "pad"             256x256 への収め方：pad（全体を収めて余白）／crop（埋めてはみ出しを切る）。既定は aspect なら pad
   transparent = "#FF00FF" 透明にする色。"corner"＝各画像の左上 (0,0) の色、";" 区切りで複数。transparent_tolerance＝許す差
-                          （aspect／fit／transparent は全層の既定。層の中に書けばその層だけ変えられる）
+                          "auto"＝層のコマのまわりの色から自動で決める（許す差も、書いていなければ自動）
+  transparent_fringe = 3  透明にしたドットから N ドット以内（ふち）の、透明色が混ざった色を直す（既定 0＝しない）。
+                          透明色の混ざり具合が transparent_cut（既定 0.5）以上なら透明、それより少なければ近くの内側の色にする
+  transparent_despill = true  ふちの近く（true＝4 ドット、数で幅）の色のかぶり取り：透明色が混ざった色から元の色を推測して戻す
+                          （混ざり具合が transparent_cut 以上なら透明。脚の間の細い隙間など）
+  transparent_prescale = 2  動画の層で、256x256 に縮める前（縦 256×N。1＝元の大きさ）に透明色を抜く（既定 2。0＝縮めた後）。
+                          細い隙間が背景と混ざらずに残る。ふち・かぶり取りの幅はその大きさのドットで数える
+  flatten = 12            減色の前に単色のむらを均す。RGB 各の差が N 以内の近くのドットだけで平均する（既定 0＝しない）
+  despeckle = true        減色の後に、まわりと色の近い 1 ドットだけの点を消す（true＝差 24 まで、数で差を指定。既定 false）
+                          （aspect／fit／transparent〜despeckle は全層の既定。層の中に書けばその層だけ変えられる）
 設定ファイル（層。[[layer]] を並べる）:
   name = "bg"
   plane = "g1"            g0／g1（グラフィック）／text（テキスト面）／sprite（スプライト）／bg0／bg1（BG 面、8x8 のタイル）
-  src = "bg"              PNG 連番のフォルダ、または動画ファイル（設定ファイルからの相対）。アルファ 128 未満は透明（色0）
+  src = "bg"              画像（PNG・JPEG・GIF など）の連番のフォルダ、画像 1 枚、動画、またはアニメーション GIF（設定ファイルからの相対）。アルファ 128 未満は透明（色0）
   start = 12.5            （動画のときだけ）動画の何秒目から使うか。省略すると頭（0 秒）から
   duration = 4.0          （動画のときだけ）start から何秒分を使うか。省略すると最後まで
   base = true             基準の層（全部の層の中でちょうど 1 つ）。この層の fps が全体の速さの基準になる
@@ -66,9 +75,9 @@ r"""mkscene.py : 層（グラフィック 0／1、テキスト面、スプライ
   loop_ratio = 2.0        （基準でない層）この層の 1 ループを、基準の層の 1 ループの何倍の長さにするか（fps の代わり）。
                           この層のコマは、その長さを等分して切り替わる（1 コマの時間は自動で決まる）。
                           → 下の「層の速さの決め方」も参照
-  first = 10             （PNG 連番のとき）使い始める画像の番号。PNG をファイル名順に並べ、先頭を 0 番と数える（0 始まり）。
+  first = 10             （画像の連番のとき）使い始める画像の番号。画像をファイル名順に並べ、先頭を 0 番と数える（0 始まり）。
                           この例では 11 枚目の画像から使う。省略すると 0（先頭から）
-  count = 24              （PNG 連番のとき）first から何枚使うか。省略すると最後まで。
+  count = 24              （画像の連番のとき）first から何枚使うか。省略すると最後まで。
                           例：first = 10、count = 24 なら 10 番〜33 番（11 枚目〜34 枚目）の 24 枚
   sequence = "0-7,6-1"    表示する順番。画像の番号は 0 始まり（first を書いたときは、使う範囲の先頭が 0 番）。
                           a-b＝範囲（逆順も可）、:x＝表示時間 x 倍（"0.5s" なら秒）、*k＝くり返し、かっこでまとめる："(0-3)*4"
@@ -145,7 +154,7 @@ FOREVER_MAX_CYCLES = 6  # 永久ループの周期を探すときに何周まで
 
 
 class Layer:
-    def __init__(self, cfg, base_dir, out, aspect=None, fit=None, key=None, key_tol=0):
+    def __init__(self, cfg, base_dir, out, aspect=None, fit=None, key=None, key_tol=0, clean=None):
         self.name = cfg["name"]
         self.plane = cfg.get("plane", "g0")
         if self.plane not in PLANES:
@@ -167,15 +176,39 @@ class Layer:
             aspect = animcommon.pixel_aspect(cfg["aspect"], cfg.get("pixel_aspect"))
         fit = animcommon.fit_mode(cfg.get("fit", fit), aspect)
         self.aspect = aspect
-        if self.src.is_file():  # 動画：ffmpeg で PNG 連番を切り出す（横の補正も ffmpeg で済ませる）
-            folder = out / f"frames_{self.name}"
-            animcommon.extract_video(self.src, folder, self.fps or 12, cfg.get("start"), cfg.get("duration"), aspect, fit)
-            self.src = folder
-            aspect, fit = None, "crop"  # 切り出した PNG は 256x256 なのでそのまま
         # 透明色：層の transparent が全体の指定より優先（"none" で無し）
         key = animcommon.parse_key_colors(cfg["transparent"]) if "transparent" in cfg else (key or [])
-        key_tol = int(cfg.get("transparent_tolerance", key_tol))
-        self.frames = load_rgba(self.src, aspect, fit, int(cfg.get("first", 0)), cfg.get("count"), key, key_tol)
+        key_tol = cfg.get("transparent_tolerance", key_tol)  # None＝書いていない（auto なら判定した値、ほかは 0）
+        # 減色の前処理（ふち・かぶり取り・むら・孤立ドット）：層の指定が全体の指定より優先
+        self.clean = animcommon.clean_options(cfg, clean)
+        self.despeckle = self.clean["despeckle"]
+        if animcommon.is_moving(self.src):  # 動画・アニメーション画像：PNG 連番に切り出す
+            folder = out / f"frames_{self.name}"
+            pre = self.clean["transparent_prescale"]
+            pre = (animcommon.PRESCALE_DEFAULT if pre is None else int(pre)) if key else 0
+            raw = animcommon.extract_frames(self.src, folder, self.fps or 12, cfg.get("start"), cfg.get("duration"),
+                                            aspect, fit, raw=pre)
+            self.src = folder
+            if not raw:
+                aspect, fit = None, "crop"  # 切り出した PNG は 256x256 なのでそのまま
+            # raw のときは、大きいまま透明色を抜いてから fit_256 で縮める（load_rgba）
+        if key == ["auto"]:  # 透明色を、この層のコマのまわりの色から決める
+            files = animcommon.list_images(self.src)
+            first, count = int(cfg.get("first", 0)), cfg.get("count")
+            files = files[first:] if count is None else files[first:first + int(count)]
+            if not files:
+                raise SystemExit(f"層 {self.name}：画像が見つかりません（{self.src}）")
+            key, tol, msg = animcommon.detect_key(files)
+            print(f"層 {self.name}：透明色を自動で決めました：{msg}"
+                  + (f"（許す差は書いた {int(key_tol)} を使います）" if key and key_tol is not None else ""))
+            if key_tol is None:
+                key_tol = tol
+        key_tol = int(key_tol or 0)
+        self.frames = load_rgba(self.src, aspect, fit, int(cfg.get("first", 0)), cfg.get("count"), key, key_tol,
+                                self.clean["transparent_fringe"], self.clean["transparent_cut"],
+                                self.clean["transparent_despill"], animcommon.speck_tolerance(key_tol, self.despeckle))
+        if self.clean["flatten"]:
+            self.frames = [animcommon.flatten(f, self.clean["flatten"]) for f in self.frames]
         # 順番（sequence）と表示時間（hold）。使う画像だけを、最初に出てくる順に 0, 1, … と番号を付け直す
         used, self.steps = parse_sequence(cfg.get("sequence"), len(self.frames), cfg.get("hold"), self.fps, self.name)
         self.frames = [self.frames[i] for i in used]
@@ -284,18 +317,20 @@ def parse_sequence(spec, n, hold=None, fps=None, layer=""):
     return used, [(remap[k], w) for k, w in merged]
 
 
-def load_rgba(folder: Path, aspect=None, fit=None, first=0, count=None, key=(), key_tol=0):
-    """フォルダの PNG（名前順）を読む。first／count で一部だけ（長い素材を分割するとき）。
+def load_rgba(folder: Path, aspect=None, fit=None, first=0, count=None, key=(), key_tol=0, fringe=0, cut=0.5, spill=0,
+              speck=0):
+    """フォルダの画像（PNG・JPEG など。名前順）か、画像 1 枚を読む。first／count で一部だけ（長い素材を分割するとき）。
     key の色は透明にする（縮める前に。縮めた後のふちの半端なドットはアルファ 128 で分ける）"""
-    if not folder.is_dir():
-        raise SystemExit(f"PNG のフォルダが見つかりません：{folder}")
-    all_files = sorted(folder.glob("*.png"))
+    if not folder.is_dir() and not animcommon.is_image(folder):
+        raise SystemExit(f"画像のフォルダが見つかりません：{folder}")
+    all_files = animcommon.list_images(folder)
     if not all_files:
-        raise SystemExit(f"{folder} に PNG がありません")
+        raise SystemExit(f"{folder} に画像（{'・'.join(sorted(e[1:].upper() for e in animcommon.IMAGE_EXT))}）がありません")
     files = all_files[first:] if count is None else all_files[first:first + int(count)]
     if not files:
-        raise SystemExit(f"first = {first} ですが、{folder} の PNG は {len(all_files)} 枚（0〜{len(all_files) - 1} 番）しかありません")
-    return [np.asarray(animcommon.fit_256(animcommon.key_transparent(Image.open(f).convert("RGBA"), key, key_tol),
+        raise SystemExit(f"first = {first} ですが、{folder} の画像は {len(all_files)} 枚（0〜{len(all_files) - 1} 番）しかありません")
+    return [np.asarray(animcommon.fit_256(animcommon.key_transparent(Image.open(f).convert("RGBA"), key, key_tol,
+                                                                     fringe, cut, spill, speck),
                                           aspect, fit)) for f in files]
 
 
@@ -323,6 +358,8 @@ def make_palette(layers, ncolors=254):
 
 
 def quantize_layer(L, pal_img, pal, dither, strength, stab):
+    """層のコマを色番号にする。L.despeckle（RGB 各の差、0 で無し）があれば孤立ドットを消す"""
+    speck = getattr(L, "despeckle", 0)
     prev = None
     for f in L.frames:
         rgb = f[..., :3]
@@ -330,6 +367,8 @@ def quantize_layer(L, pal_img, pal, dither, strength, stab):
         words = words.copy()
         words[f[..., 3] < 128] = 0x0001  # 透明 → 色0
         idx = a_enc.quantize(words, pal)
+        if speck:
+            idx = animcommon.despeckle(idx, pal.colors, speck)
         if stab and prev is not None:
             s = animcommon.stabilize(idx, prev, Image.fromarray(rgb), pal, stab)
             idx = np.where(idx == 0, 0, s)  # 透明はそのまま
@@ -972,12 +1011,14 @@ def with_key_checks(lines, exit_key):
 SCENE_KEYS = {"name", "clock", "loops", "loop", "exit_key", "diff", "dither", "dither_strength", "stabilize",
               "audio", "audio_start", "audio_duration", "gain", "audio_offset", "audio_every", "audio_loop",
               "no_drop", "timelog", "order", "graphic_order", "aspect", "pixel_aspect", "fit",
-              "transparent", "transparent_tolerance", "sim", "buffers", "out", "wait", "fixed_cels",
+              "transparent", "transparent_tolerance", "transparent_fringe", "transparent_cut", "transparent_despill",
+              "transparent_prescale", "flatten", "despeckle", "sim", "buffers", "out", "wait", "fixed_cels",
               "adjust_every", "adjust_frames", "fm", "fm_offset", "fm_every", "se", "layer"}
 SE_KEYS = {"src", "offset", "every", "track"}
 LAYER_KEYS = {"name", "plane", "src", "start", "duration", "base", "fps", "loop_ratio", "first", "count",
-              "sequence", "hold", "aspect", "pixel_aspect", "fit", "transparent", "transparent_tolerance", "diff",
-              "buffers", "fixed_cels"}
+              "sequence", "hold", "aspect", "pixel_aspect", "fit", "transparent", "transparent_tolerance",
+              "transparent_fringe", "transparent_cut", "transparent_despill", "transparent_prescale", "flatten",
+              "despeckle", "diff", "buffers", "fixed_cels"}
 
 
 def validate(a: dict, base_dir: Path):
@@ -1070,7 +1111,7 @@ def validate(a: dict, base_dir: Path):
         src = Path(c["src"])
         src = src if src.is_absolute() else base_dir / src
         if not src.exists():
-            raise SystemExit(f"{W}：src（PNG のフォルダか動画）が見つかりません：{src}")
+            raise SystemExit(f"{W}：src（画像のフォルダ・画像・動画）が見つかりません：{src}")
         cli.check_number(W, "start", c.get("start"), minimum=0)
         cli.check_number(W, "duration", c.get("duration"), above=0)
         cli.check_bool(W, "base", c.get("base"))
@@ -1101,6 +1142,16 @@ def check_shape(W, d):
         raise SystemExit(f"{W}：transparent は \"#FF00FF\" のような文字列で書いてください（今は {d['transparent']!r}）")
     animcommon.parse_key_colors(d.get("transparent"))
     cli.check_number(W, "transparent_tolerance", d.get("transparent_tolerance"), integer=True, minimum=0, maximum=255)
+    cli.check_number(W, "transparent_fringe", d.get("transparent_fringe"), integer=True, minimum=0, maximum=8)
+    cli.check_number(W, "transparent_cut", d.get("transparent_cut"), minimum=0, maximum=1)
+    if d.get("transparent_despill") is not None and not isinstance(d["transparent_despill"], bool):
+        cli.check_number(W, "transparent_despill", d.get("transparent_despill"), integer=True, minimum=0, maximum=64)
+    cli.check_number(W, "transparent_prescale", d.get("transparent_prescale"), integer=True, minimum=0, maximum=8)
+    cli.check_number(W, "flatten", d.get("flatten"), minimum=0, maximum=255)
+    if d.get("despeckle") is not None and not isinstance(d["despeckle"], bool):
+        if not isinstance(d["despeckle"], (int, float)):
+            raise SystemExit(f"{W}：despeckle は true／false か、色の差の数で書いてください（今は {d['despeckle']!r}）")
+        cli.check_number(W, "despeckle", d.get("despeckle"), minimum=0, maximum=255)
 
 
 def output_dir(a, base_dir, name):
@@ -1149,7 +1200,9 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
         f.unlink()
     aspect = animcommon.pixel_aspect(a.get("aspect", False), a.get("pixel_aspect"))
     key = animcommon.parse_key_colors(a.get("transparent"))
-    layers = [Layer(c, base_dir, out, aspect, a.get("fit"), key, int(a.get("transparent_tolerance", 0))) for c in a["layer"]]
+    clean = animcommon.clean_options(a)
+    layers = [Layer(c, base_dir, out, aspect, a.get("fit"), key, a.get("transparent_tolerance"), clean)
+              for c in a["layer"]]
     planes_used = [L.plane for L in layers if not L.sprite]
     if len(set(planes_used)) != len(planes_used):
         raise SystemExit("1 つの面（g0／g1／text）に置ける層は 1 つです（スプライトは何層でも可）")
@@ -1172,6 +1225,10 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
     pal = a_enc.Palette()
     tpal = a_enc.Palette()
     q = (a.get("dither", "none"), a.get("dither_strength", 24.0), a.get("stabilize", 0))
+    if q[0] != "none":
+        for L in layers:
+            if L.despeckle:
+                print(f"  警告：層 {L.name} の despeckle は、ディザ（dither = \"{q[0]}\"）の模様を点として消してしまいます")
     if g_layers:
         pal_img = make_palette(g_layers)
         for L in g_layers:

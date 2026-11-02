@@ -40,7 +40,10 @@
   --dither none／fs／ordered、--dither-strength N   減色のディザ（既定 none）
   --fast               描く速さを優先して符号化する（既定は bpica.x と同じ符号化）
   --aspect、--pixel-aspect R、--fit crop／pad       ドットの縦横比の補正、256x256 への収め方（mkanim と同じ）
-  --transparent 色、--transparent-tolerance N      透明にする色（"#FF00FF"、"corner" など。mkanim と同じ）
+  --transparent 色、--transparent-tolerance N      透明にする色（"#FF00FF"、"corner"、"auto" など。mkanim と同じ）
+  --transparent-fringe N、--transparent-cut A      透明色のふちのにじみを直す（mkanim と同じ）
+  --transparent-despill [N]                        ふちの近くの色のかぶり取り（mkanim と同じ）
+  --flatten T、--despeckle [T]                     単色のむらを均す、孤立した 1 ドットを消す（mkanim と同じ）
   --gain dB、--start 秒、--duration 秒             音量の調整、音の何秒目から何秒分を使うか（全部の音声に）
   --fps N              ひな形の .s で、画像を何枚／秒で切り替えるか（既定 2）
   --wait tmwa          ひな形の待ちを panic.x の TMWA にする。既定は vwait（VWAIT：再生の頭からの予定の時刻で待ち、
@@ -67,7 +70,7 @@ import mkscene  # noqa: E402
 import mml2zmd  # noqa: E402
 import clock as clk  # noqa: E402
 
-IMAGE_EXT = {".png", ".bmp", ".jpg", ".jpeg", ".gif", ".tif", ".tiff", ".webp"}
+IMAGE_EXT = animcommon.IMAGE_EXT
 AUDIO_EXT = {".wav", ".mp3", ".ogg", ".flac", ".m4a", ".aac", ".aif", ".aiff", ".wma", ".opus"}
 MML_EXT = {".zms", ".opm", ".zmd"}
 TARGETS = ("cel", "pal", "pcm", "zmd", "s")
@@ -121,9 +124,11 @@ def collect(inputs):
 
 def load_image(path, a):
     im = Image.open(path).convert("RGBA")
-    im = animcommon.key_transparent(im, animcommon.parse_key_colors(a.transparent), a.transparent_tolerance)
+    im = animcommon.key_transparent(im, animcommon.parse_key_colors(a.transparent), a.transparent_tolerance,
+                                    a.transparent_fringe, a.transparent_cut, a.transparent_despill,
+                                    animcommon.speck_tolerance(a.transparent_tolerance, a.despeckle))
     aspect = animcommon.pixel_aspect(a.aspect, a.pixel_aspect)
-    return np.asarray(animcommon.fit_256(im, aspect, a.fit))
+    return animcommon.flatten(np.asarray(animcommon.fit_256(im, aspect, a.fit)), a.flatten)
 
 
 def make_cels(frames, a, base_pal, top):
@@ -134,6 +139,7 @@ def make_cels(frames, a, base_pal, top):
     if room <= 0:
         raise SystemExit("パレットがいっぱいで、新しい色を足せません（--pal-in のパレット）")
     F = _Frames(frames)
+    F.despeckle = a.despeckle
     mkscene.quantize_layer(F, mkscene.make_palette([F], ncolors=min(top - 1, room)), pal,
                            a.dither, a.dither_strength, 0)
     if pal.last > top:
@@ -231,7 +237,12 @@ def main(argv):
     ap.add_argument("--pixel-aspect", type=float)
     ap.add_argument("--fit", choices=["crop", "pad"])
     ap.add_argument("--transparent")
-    ap.add_argument("--transparent-tolerance", type=int, default=0)
+    ap.add_argument("--transparent-tolerance", type=int)
+    ap.add_argument("--transparent-fringe", type=int, default=0)
+    ap.add_argument("--transparent-cut", type=float, default=0.5)
+    ap.add_argument("--transparent-despill", type=int, nargs="?", const=animcommon.DESPILL_DEFAULT, default=0)
+    ap.add_argument("--flatten", type=float, default=0.0)
+    ap.add_argument("--despeckle", type=float, nargs="?", const=animcommon.DESPECKLE_DEFAULT, default=0)
     ap.add_argument("--gain", type=float, default=0.0)
     ap.add_argument("--start", type=float)
     ap.add_argument("--duration", type=float)
@@ -251,6 +262,11 @@ def main(argv):
     cli.check_number("オプション", "--fps", a.fps, above=0, maximum=60)
     a.clock = clk.parse(a.clock, "オプション", "--clock")
     cli.check_number("オプション", "--transparent-tolerance", a.transparent_tolerance, minimum=0, maximum=255)
+    cli.check_number("オプション", "--transparent-fringe", a.transparent_fringe, minimum=0, maximum=8)
+    cli.check_number("オプション", "--transparent-cut", a.transparent_cut, minimum=0, maximum=1)
+    cli.check_number("オプション", "--transparent-despill", a.transparent_despill, integer=True, minimum=0, maximum=64)
+    cli.check_number("オプション", "--flatten", a.flatten, minimum=0, maximum=255)
+    cli.check_number("オプション", "--despeckle", a.despeckle, minimum=0, maximum=255)
     cli.check_number("オプション", "--sprite-pal", a.sprite_pal, integer=True, minimum=1, maximum=15)
     if a.pal_in:
         cli.need_file(a.pal_in, "パレットファイル（--pal-in）")
@@ -261,6 +277,14 @@ def main(argv):
     animcommon.parse_key_colors(a.transparent)  # 書き方の確認
 
     images, audios, mmls = collect(a.inputs)
+    if images and animcommon.parse_key_colors(a.transparent) == ["auto"]:  # 透明色を入力の画像全体のまわりの色から決める
+        keys, tol, msg = animcommon.detect_key([p for p in images])
+        print(f"透明色を自動で決めました：{msg}"
+              + (f"（許す差は書いた {a.transparent_tolerance} を使います）" if keys and a.transparent_tolerance is not None else ""))
+        a.transparent = animcommon.key_text(keys) if keys else None
+        if a.transparent_tolerance is None:
+            a.transparent_tolerance = tol
+    a.transparent_tolerance = int(a.transparent_tolerance or 0)
     se_names = {s.strip().lower() for s in a.se.split(",") if s.strip()}
     unknown = se_names - {m.name.lower() for m in mmls} - {m.stem.lower() for m in mmls}
     if unknown:

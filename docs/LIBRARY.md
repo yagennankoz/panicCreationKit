@@ -164,7 +164,7 @@ TMWA で書いた .s を VWAIT にする手順です。
 
 ### 3.4 ツールを使ってビルドする
 
-自分で書いた .s を、buildPan で .pan にする場合です（[MANUAL.md](MANUAL.md) の 5 章「手で作る」も見てください）。
+自分で書いた .s を、buildPan で .pan にする場合です（[手で作る（mkparts＋buildPan）](manual/mkparts.md) も見てください）。
 
 ```
 pt buildPan x68\anim\名前\名前.s
@@ -225,7 +225,7 @@ tl_exp_end:
 
 Z-MUSIC ver2 の FM 音源の曲と効果音を、スケジュールの好きな所で鳴らす・止めるための命令です。
 Z-MUSIC のファンクションコール（`trap #3`。Z-MUSIC のマニュアル ZM10.MAN）を、panic の命令と同じ書き方で使えるようにしたものです。
-mkscene・mkanim・mkparts は、設定に FM 音源があると自動で入れます。準備・MML の書き方・効果音の決まりは [MANUAL.md](MANUAL.md) の 8 章を見てください。
+mkscene・mkanim・mkparts は、設定に FM 音源があると自動で入れます。準備・MML の書き方・効果音の決まりは [FM 音源](manual/fm.md) を見てください。
 
 ### 5.1 命令（マクロ）
 
