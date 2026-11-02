@@ -66,6 +66,8 @@ def parse(src: Path):
 
 def predict(name, clock):
     d = ROOT / "x68" / "anim" / name
+    if (d / "build" / f"{name}.s").is_file():  # .s・セルは build/ の中（成果物のフォルダには .pan だけ）
+        d = d / "build"
     seq = parse(d / f"{name}.s")
     cache = {}
     total = 0

@@ -7,7 +7,8 @@
 
   入力：画像（png、bmp、jpg、gif など）、音声（wav、mp3、ogg、flac など）、画像の入ったフォルダ（名前順）、
         FM 音源の MML（Z-MUSIC ver2 の .zms／.opm）か ZMD（.zmd）。いくつでも並べてよい。
-  出力（--out、省略すると x68/anim/<名前>/）。--plane で、どの面に使う形にするかを選ぶ（既定 g0）：
+  出力（--out、省略すると x68/anim/<名前>/ の中の build/。buildPan は .pan を build/ の一つ上に作る）。
+  --plane で、どの面に使う形にするかを選ぶ（既定 g0）：
     --plane g0／g1（グラフィック、256 色）
       <画像>.cel   a_enc のセル（code #4、256x256、差分なしの 1 枚まるごと。bpica.x と同じ形）。DRW0／DRW1 で描く
       <名前>.pal   パレット（全部の画像で共通。GPAL で使う。--pal-each なら画像ごとに <画像>.pal）
@@ -66,6 +67,7 @@ import spr_enc  # noqa: E402
 import txt_enc  # noqa: E402
 import animcommon  # noqa: E402
 import cli  # noqa: E402
+import buildPan  # noqa: E402
 import mkscene  # noqa: E402
 import mml2zmd  # noqa: E402
 import clock as clk  # noqa: E402
@@ -298,9 +300,15 @@ def main(argv):
     if not make:
         raise SystemExit("作るものがありません（画像も音声も MML も無いか、--make に合う入力がありません）")
     # 出力先。mkparts はファイルを消さないので、すでに素材のあるフォルダへ足してもよい（同じ名前のファイルは上書き）
-    out = a.out.resolve() if a.out else mkscene.ROOT / "x68" / "anim" / name
-    if out.exists() and not out.is_dir():
-        raise SystemExit(f"出力先がフォルダではありません：{out}")
+    top = a.out.resolve() if a.out else mkscene.ROOT / "x68" / "anim" / name
+    if top.exists() and not top.is_dir():
+        raise SystemExit(f"出力先がフォルダではありません：{top}")
+    # 素材・.s・.json は build/ に置く（buildPan は .pan をその一つ上に作る）。
+    # 出力先に <名前>.json が直接あるときは、そこにある .s（手で直したもの）を動かさないよう、そのフォルダをそのまま使う
+    old_style = (top / f"{name}.json").is_file() and not (top / mkscene.BUILD_DIR / f"{name}.json").is_file()
+    out = top if old_style else top / mkscene.BUILD_DIR
+    if out == top:
+        print(f"  {top} に {name}.json があるので、このフォルダに書きます（build/ は使いません）")
     out.mkdir(parents=True, exist_ok=True)
     used = {name.lower()}
     img_items = [(p, short_name(p.stem, used)) for p in images]
@@ -328,8 +336,11 @@ def main(argv):
                 (out / pal_file).write_bytes(pal.to_bytes() if graphic else pal.to_bytes()[:34])
                 parts.append([pal_lab, pal_file])
                 print(f"  パレット {pal_file}：{pal.last + 1} 色" + ("" if graphic else "（16 色用、34 バイト）"))
+            rdir = out / animcommon.REDUCED_DIR  # 減色した後の画像（<短い名前>.png。素材を足すときは同じ名前を上書き）
+            rdir.mkdir(parents=True, exist_ok=True)
             for k, im in zip(g, idx):
                 path, short = img_items[k]
+                animcommon.save_indexed_png(rdir / f"{short}.png", im, pal.colors)
                 if not ("cel" in make or "s" in make):
                     continue
                 if plane == "sprite":
@@ -409,7 +420,7 @@ def main(argv):
             {"name": name, "clock": a.clock, "nominal": None, "parts": parts,
              "scene": "mkparts " + " ".join(argv[1:]), "forever": False, "cycle": None},
             ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"-> {out}")
+    print(f"-> {out}（.pan は buildPan で {buildPan.pan_path(out / (name + '.s'))} に作ります）")
     if a.build:
         import panbuild
         panbuild.build_dir(out, a.clock)

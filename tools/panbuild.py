@@ -4,7 +4,7 @@ r"""panbuild.py : mkanim.py --stop-at-s で止めた（そして人が .s を編
 
   --sim   できた .pan を pansim（PC 上のシミュレータ）で動かし、再生時間と処理落ちを表示する（既定はしない）
 
-フォルダの中身（mkanim.py が作る）:
+フォルダ（mkanim.py が作る <出力先>/build/。<出力先> を指定してもよい。.pan は <出力先> に作る）の中身:
   <名前>.s     スケジュール。人が編集してよい。最後の `.include <名前>_d.h` は消さないこと（素材のラベルが入る）
   <名前>_d.h   素材のラベル（data_top からの位置の .equ）。panbuild が毎回作り直すので編集しない
   <名前>.json  素材の一覧 {"name":…, "clock":…, "parts":[[ラベル, ファイル名], …]}。並び順に .pan の後ろへつなげる。
@@ -39,7 +39,7 @@ def build_dir(target, clock=None, quiet=False, sim=False):
     """フォルダ（または .json）から .pan を作り、(pan のパス, pansim の結果) を返す。
     sim=False なら pansim は動かさない（結果は None）"""
     target = Path(target)
-    js = target if target.suffix == ".json" else next(iter(sorted(target.glob("*.json"))), None)
+    js = buildPan.parts_list(target)
     if js is None:
         raise SystemExit(f"{target} に素材の一覧（.json）がありません")
     d = js.parent

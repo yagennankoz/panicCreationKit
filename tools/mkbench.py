@@ -336,7 +336,7 @@ def build(a, base_dir, stop=False, src_desc=""):
     validate(a, base_dir)
     name = a["name"]
     clock = clk.parse(a.get("clock"))
-    out = mkscene.output_dir(a, base_dir, name)
+    out = mkscene.work_dir(mkscene.output_dir(a, base_dir, name), name)  # 中間ファイルは build/、.pan はその一つ上
     for f in list(out.glob("*.cel")) + list(out.glob("pcm*.dat")):
         f.unlink()
     q = (a.get("dither", "none"), a.get("dither_strength", 24.0), a.get("stabilize", 0))

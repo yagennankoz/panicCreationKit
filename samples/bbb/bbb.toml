@@ -22,4 +22,4 @@ dither = "none"           # none / fs / ordered
 
 # 再生
 loop = 1
-timelog = true            # 再生時間を anim\bbb12\time.txt に書く（確認用）
+timelog = true            # 再生時間を anim\bbb12\build\time.txt に書く（確認用）

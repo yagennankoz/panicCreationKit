@@ -2,10 +2,11 @@ r"""mkscene.py : 層（グラフィック 0／1、テキスト面、スプライ
 
 使い方:  pt mkscene <設定.toml> [--out フォルダ] [--stop-at-s] [--sim]
   --out で出力先のフォルダ（省略すると設定の out、それも無ければ x68/anim/<名前>/）。
+  出力先には <名前>.pan だけを置き、.s・.json・セルなどの途中のファイルは <出力先>/build/ にまとめる。
   --sim で、できた .pan を pansim（PC 上のシミュレータ）で動かし、再生時間と、各切り替えの画面が予定どおりかを確かめる
   （既定はしない。設定ファイルに sim = true と書いてもよい）。
   例は samples/layer1/scene*.toml、samples/layer1/forever.toml（永久ループ＋キーで終了）。
-  --stop-at-s で .s まで作って止め、編集後は pt buildPan x68/anim/<名前>/<名前>.s。
+  --stop-at-s で .s まで作って止め、編集後は pt buildPan x68/anim/<名前>/build/<名前>.s。
   1 枚もの（画像の連番や動画 1 本）は mkanim.py でも作れる（中身はこのファイルの build を呼んでいる）。
 
 設定ファイル（全体）:
@@ -134,6 +135,7 @@ import adpcm  # noqa: E402
 import animcommon  # noqa: E402
 import cli  # noqa: E402
 import mml2zmd  # noqa: E402
+import buildPan  # noqa: E402
 import panbuild  # noqa: E402
 import pansim  # noqa: E402
 from pansim import KEY_US, MOVE_US, SPOF_US  # noqa: E402
@@ -1164,14 +1166,37 @@ def output_dir(a, base_dir, name):
         out = ROOT / "x68" / "anim" / name
     if out.exists() and not out.is_dir():
         raise SystemExit(f"出力先がフォルダではありません：{out}")
-    if out.is_dir() and not (out / f"{name}.json").exists():
-        import re
-        mine = [f.name for f in out.iterdir() if re.fullmatch(r"[cs]\d{3}\.(cel|spr)", f.name)]
-        if mine:
-            raise SystemExit(f"出力先 {out} に、このツールが作ったものでないかもしれないファイル（{mine[0]} など）があります。"
-                             "別のフォルダを指定してください")
+    import re
+    for d in (out, out / BUILD_DIR):  # 成果物のフォルダと、中間ファイルの build/ の両方を確かめる
+        if d.is_dir() and not (d / f"{name}.json").exists() and not (out / BUILD_DIR / f"{name}.json").exists():
+            mine = [f.name for f in d.iterdir() if re.fullmatch(r"[cs]\d{3,}\.(cel|spr)", f.name)]
+            if mine:
+                raise SystemExit(f"出力先 {d} に、このツールが作ったものでないかもしれないファイル（{mine[0]} など）があります。"
+                                 "別のフォルダを指定してください")
     out.mkdir(parents=True, exist_ok=True)
     return out
+
+
+BUILD_DIR = buildPan.BUILD_DIR  # 中間ファイルを置くサブフォルダ（成果物のフォルダには .pan だけ）
+OLD_PARTS = ("c[0-9][0-9][0-9]*.cel", "s[0-9][0-9][0-9]*.spr", "*.dat", "*.zse", "*.zmv", "*.zmd", "bgtile.spr", "time.txt")
+
+
+def work_dir(out, name):
+    """中間ファイルを置く <出力先>/build/ を作って返す。
+    このツールの出力先（<名前>.json がある）なら、成果物のフォルダに直接置かれた中間ファイルを片付ける"""
+    import shutil
+    ours = (out / f"{name}.json").is_file() or (out / BUILD_DIR / f"{name}.json").is_file()
+    if ours:  # このツールが作った出力先：成果物のフォルダに直接残っている中間ファイルを片付ける
+        for pat in OLD_PARTS + (f"{name}.s", f"{name}_d.h", f"{name}.json", f"{name}.o", f"{name}.x"):
+            for f in out.glob(pat):
+                if f.is_file():
+                    f.unlink()
+        for d in list(out.glob("frames_*")) + [out / animcommon.REDUCED_DIR, out / "frames", out / "parts"]:
+            if d.is_dir():
+                shutil.rmtree(d)
+    w = out / BUILD_DIR
+    w.mkdir(parents=True, exist_ok=True)
+    return w
 
 
 def timelog_path(out, name):
@@ -1195,7 +1220,8 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
     exit_key = a.get("exit_key") or "any"
     if exit_key not in ("any", "none", *EXIT_KEYS):
         raise SystemExit(f"exit_key は any／space／return／none（{exit_key}）")
-    out = output_dir(a, base_dir, name)
+    top = output_dir(a, base_dir, name)  # 成果物のフォルダ（.pan だけを置く）
+    out = work_dir(top, name)            # 中間ファイル（.s・.json・セルなど）の build/
     for f in list(out.glob("c*.cel")) + list(out.glob("s*.spr")):
         f.unlink()
     aspect = animcommon.pixel_aspect(a.get("aspect", False), a.get("pixel_aspect"))
@@ -1293,6 +1319,11 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
                     mp[ty, tx] = (B.palno << 8) | tid if tid else 0
             B.maps.append(mp)
             B.bgimg.append((idx, pw[idx]))
+    # 減色した後の画像を PNG で残す（<出力先>/build/reduced/<層>/<元の画像の番号>.png。確かめる・手直しに使う）
+    qpal = {id(L): pal for L in g_layers} | {id(L): tpal for L in t_layers} \
+        | {id(L): L.spal for L in s_layers + b_layers}
+    n_png = animcommon.save_reduced(out, [(L.name, list(zip(L.img_no, L.idx)), qpal[id(L)].colors) for L in layers])
+    print(f"減色した後の画像：{out / animcommon.REDUCED_DIR}（{n_png} 枚）")
     if len(tiles) > 256:
         raise SystemExit(f"BG のタイルが {len(tiles)} 種類（8x8 で 256 まで）。絵を単純にするか、コマを減らしてください")
     bg_pcg = (len(tiles) + 3) // 4 if b_layers else 0  # 16x16 の PCG にして 4 個ずつ（$EB8000 から）

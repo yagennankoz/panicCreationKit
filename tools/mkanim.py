@@ -4,7 +4,7 @@ r"""mkanim.py : 画像（PNG・JPEG など）の連番または動画 1 本か�
         pt mkanim --config 設定.toml [オプション]   （設定ファイルの例：samples/bbb/bbb.toml。キーはオプション名）
 
   <名前>     出力名（Human68k の 8.3 形式を考えて英数字 8 文字以内）。<出力先>/<名前>.pan ができる
-  --out      出力先のフォルダ（省略すると x68/anim/<名前>/）
+  --out      出力先のフォルダ（省略すると x68/anim/<名前>/）。.pan だけを置き、途中のファイルは <出力先>/build/ に
   --fps      1 秒あたりのコマ数（既定 12）。1 カウント＝18.03ms（TMWA の実測値）で待ち時間を割り振る
   --loop N   N 回くり返す（既定 1）
   --forever  永久ループ（キーが押されるまでくり返す。ESC でも終わる）
@@ -30,7 +30,7 @@ r"""mkanim.py : 画像（PNG・JPEG など）の連番または動画 1 本か�
   --no-fixed-cels  分割描画の区切りをその時の空き時間で決める（既定は絵ごとに決めた区切りのセルを使い回す）
   --wait tmwa   待ちを panic.x の TMWA にする（遅れは取り戻さない）。既定 vwait＝再生の頭からの予定の時刻で待ち、遅れたコマの分を後の待ちで取り戻す
   --sim      できた .pan を pansim（PC 上のシミュレータ）で動かし、再生時間と画面が予定どおりかを確かめる（既定はしない）
-  --stop-at-s  素材と .s を作った所で止める。.s を編集したら pt buildPan x68/anim/<名前>/<名前>.s で続き
+  --stop-at-s  素材と .s を作った所で止める。.s を編集したら pt buildPan x68/anim/<名前>/build/<名前>.s で続き
   --timelog  再生時間を anim\<名前>\time.txt に書く（処理落ちの確認用。H:\ で実行すること）
   --sequence 順番  画像を表示する順番（画像の番号は PNG をファイル名順に並べて先頭を 0 番と数える＝0 始まり）。例 "0-7,6-1"、"0,1,2:3,(3-5)*4"
              a-b＝a から b まで（逆順も可）、:x＝表示時間を既定のコマの x 倍（"0.5s" なら秒）、*k＝k 回くり返す
@@ -160,7 +160,7 @@ def build_split(a, argv):
     base_cfg = scene_config(a)
     video = animcommon.is_moving(src)
     if video:  # 動画・アニメーション画像は 1 回だけ切り出して、PNG 連番として分ける
-        folder = top / "frames"
+        folder = top / mkscene.BUILD_DIR / "frames"  # 中間ファイルは build/ の中（成果物のフォルダには .pan だけ）
         aspect = animcommon.pixel_aspect(a.aspect, a.pixel_aspect)
         print(f"動画を切り出しています：{src.name}")
         # 透明色を使うときは、縮める前の大きさで切り出す（mkscene の層と同じ。transparent_prescale）
@@ -188,7 +188,7 @@ def build_split(a, argv):
         t0, length = first / a.fps, count / a.fps
         cfg = dict(base_cfg)
         cfg["name"] = f"{name}{k:02d}"
-        cfg["out"] = str(top / "parts" / cfg["name"])  # 部分ごとの作業フォルダ（.pan は top にまとめる）
+        cfg["out"] = str(top / mkscene.BUILD_DIR / "parts" / cfg["name"])  # 部分ごとの作業フォルダ（.pan は top にまとめる）
         layer = dict(base_cfg["layer"][0])
         layer.pop("start", None)
         layer.pop("duration", None)

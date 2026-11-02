@@ -4,6 +4,8 @@
         pt buildPan <フォルダ または <名前>.json> [--sim] [--clock 10mhz]
         pt buildPan <名前>.s [追加の .o ...]                 素材の一覧が無い .s（素材を .s に直接書いたもの）
 
+  フォルダは、成果物のフォルダ（<名前>.pan を置く所）でも、その中の build/ でもよい。
+  .pan は、.s が build/ の中にあればその一つ上（成果物のフォルダ）に、そうでなければ .s と同じフォルダに作る。
   素材の一覧（<名前>.json、mkparts が作る）が .s と同じフォルダにあるとき：
     <名前>_d.h（素材のラベル）を作り、.s をアセンブル・リンクして、一覧の素材（セル・パレット・ADPCM）を .pan の後ろにつなげる。
     panbuild.py と同じ処理（docs/manual/mkparts.md「手で作る」）。
@@ -14,7 +16,7 @@
 処理: run68 で HAS (as -u) → HLK (lk -x) を実行し、mkpan.py で .pan に変換する。
   - ビルドは短いパスの作業フォルダ（x68/work/<名前>/。長すぎれば %LOCALAPPDATA% や TEMP の下、環境変数 PANTOOL_WORK）
     で行う。x68/lib/ のライブラリ、ソースのフォルダの .s と .h、x68/sch.h、アセンブラとリンカをそこへ写し、「.\\名前」で動かす。
-    run68 上の HAS／HLK は、プログラムのパスや 65 文字を超えるカレントを扱えないため。できた .pan はソースと同じフォルダに書く。
+    run68 上の HAS／HLK は、プログラムのパスや 65 文字を超えるカレントを扱えないため。
   - ソースは Shift-JIS・CRLF で書くこと。
   - run68・アセンブラ・リンカの場所は tools/paths.py で探す（環境変数 RUN68／PANTOOL_HAS／PANTOOL_HLK →
     setup で置いた runtime/run68/run68.exe、x68/bin/has060x.x（HAS060X）、x68/bin/hlk.r（HLK evolution）→ PATH → C:\\tools の下）。
@@ -28,6 +30,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+BUILD_DIR = "build"  # 出力先の中の、中間ファイル（.s・.json・セルなど）を置くサブフォルダ。.pan はその一つ上に作る
+
+
+def pan_path(src: Path) -> Path:
+    """ソース（.s）から作る .pan の場所：ソースが build/ の中なら一つ上（成果物のフォルダ）、そうでなければ同じフォルダ"""
+    src = Path(src).resolve()
+    d = src.parent.parent if src.parent.name == BUILD_DIR else src.parent
+    return d / f"{src.stem}.pan"
 X68 = ROOT / "x68"
 LIB = X68 / "lib"  # panicCreationKit のライブラリ（docs/LIBRARY.md）
 BIN = X68 / "bin"
@@ -180,7 +190,7 @@ def build(src, objs=(), blob=b""):
     run([progs[0], "-u", src.name], cwd)
     run([progs[1], "-x", src.with_suffix(".o").name, *work_objs], cwd)
     xfile = cwd / src.with_suffix(".x").name
-    pan = src.with_suffix(".pan")
+    pan = pan_path(src)
     pan.write_bytes(x_to_pan(xfile.read_bytes(), blob))
     print(f"-> {pan} ({pan.stat().st_size} bytes)")
     return pan
@@ -191,7 +201,10 @@ def parts_list(target: Path):
     if target.suffix.lower() == ".json":
         return target
     if target.is_dir():
-        return next(iter(sorted(target.glob("*.json"))), None)
+        js = next(iter(sorted(target.glob("*.json"))), None)
+        if js is None and (target / BUILD_DIR).is_dir():  # 成果物のフォルダを指定したとき：build/ の中の一覧
+            js = next(iter(sorted((target / BUILD_DIR).glob("*.json"))), None)
+        return js
     js = target.with_suffix(".json")
     return js if js.is_file() else None
 

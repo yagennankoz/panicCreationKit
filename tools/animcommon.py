@@ -494,6 +494,35 @@ def word_rgb(words):
     return np.stack([(w >> 6) & 31, (w >> 11) & 31, (w >> 1) & 31], -1).astype(np.int16) * 255 // 31
 
 
+REDUCED_DIR = "reduced"  # 減色した後の画像を PNG で置くサブフォルダ（出力先の中）
+
+
+def save_indexed_png(path: Path, idx, pal_words):
+    """色番号の画像（idx）を、パレット（X68000 の色のワード）付きの PNG にする。番号 0 は透明"""
+    rgb = word_rgb(list(pal_words) + [0] * (256 - len(pal_words))).astype(np.uint8)
+    im = Image.fromarray(np.asarray(idx, np.uint8), "P")
+    im.putpalette(rgb.reshape(-1).tolist())
+    im.info["transparency"] = 0
+    im.save(path, transparency=0)
+
+
+def save_reduced(out: Path, items):
+    """減色した後の画像を out/reduced/<名前>/<番号 4 桁>.png に書く（前の中身は消す）。
+    items：[(名前, [(番号, 色番号の画像), ...], パレットのワード), ...]。書いた枚数を返す"""
+    import shutil
+    top = out / REDUCED_DIR
+    if top.is_dir():
+        shutil.rmtree(top)
+    n = 0
+    for name, images, pal_words in items:
+        d = top / name
+        d.mkdir(parents=True, exist_ok=True)
+        for no, idx in images:
+            save_indexed_png(d / f"{int(no):04d}.png", idx, pal_words)
+            n += 1
+    return n
+
+
 def despeckle(idx, pal_words, th=DESPECKLE_DEFAULT, need=5):
     """孤立したドットを消す（色番号の画像で）：上下左右に同じ番号が 1 つも無く、まわり 8 ドットのうち need 以上が
     同じ番号 m で、その色との差が RGB 各 th 以内なら、m にする。透明（0）のドットは変えず、0 にもしない。"""
