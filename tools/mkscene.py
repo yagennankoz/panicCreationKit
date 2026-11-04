@@ -25,6 +25,8 @@ r"""mkscene.py : 層（グラフィック 0／1、テキスト面、スプライ
   audio_start = 3.0       音のファイルの何秒目から使うか。省略すると頭（0 秒）から
   audio_duration = 8.0    audio_start から何秒分を使うか。省略すると最後まで
   gain = -3.0             音量の調整 [dB]。省略すると 0（そのまま）
+  audio_rate = 7.8        音のサンプリングレート [kHz]：15.6（既定）、10.4、7.8、5.2、3.9。下げると音のデータが小さくなる
+                          （15.6 以外は x68/lib/adpcm.h の PCMR で鳴らす）
   audio_offset = 0.5      音を鳴らし始める時刻 [秒]（アニメの始まりから。負なら音の頭を削って早める）
   audio_every = 3         永久ループで何周ごとに音を鳴らし直すか（既定：音が鳴り終わる周の数。0 なら最初に 1 回だけ）。
                           永久ループのくり返しの単位はこの周の数になる（音と絵が毎回同じ関係でくり返す）
@@ -216,8 +218,6 @@ class Layer:
         self.frames = [self.frames[i] for i in used]
         self.img_no = used   # 付け直した番号 → 元の画像の番号（PNG の名前順、0 から）
         self.n = len(self.frames)
-        if self.n > 1000:
-            raise SystemExit(f"層 {self.name}：コマ数は 1000 まで")
         self.total_w = sum(w for _, w in self.steps)  # 1 ループの長さ（既定のコマの時間＝1）
         self.idx = []        # 各コマの色番号画像
         self.events = []     # [(tick, コマ番号)]（tick 0 のコマ 0 を除く）
@@ -1011,7 +1011,7 @@ def with_key_checks(lines, exit_key):
 
 
 SCENE_KEYS = {"name", "clock", "loops", "loop", "exit_key", "diff", "dither", "dither_strength", "stabilize",
-              "audio", "audio_start", "audio_duration", "gain", "audio_offset", "audio_every", "audio_loop",
+              "audio", "audio_start", "audio_duration", "gain", "audio_rate", "audio_offset", "audio_every", "audio_loop",
               "no_drop", "timelog", "order", "graphic_order", "aspect", "pixel_aspect", "fit",
               "transparent", "transparent_tolerance", "transparent_fringe", "transparent_cut", "transparent_despill",
               "transparent_prescale", "flatten", "despeckle", "sim", "buffers", "out", "wait", "fixed_cels",
@@ -1064,6 +1064,7 @@ def validate(a: dict, base_dir: Path):
     cli.check_number(W, "audio_start", a.get("audio_start"), minimum=0)
     cli.check_number(W, "audio_duration", a.get("audio_duration"), above=0)
     cli.check_number(W, "gain", a.get("gain"))
+    adpcm.parse_rate(a.get("audio_rate"), "設定：audio_rate")
     cli.check_number(W, "audio_offset", a.get("audio_offset"))
     cli.check_number(W, "audio_every", a.get("audio_every"), integer=True, minimum=0)
     if a.get("fm") is not None:
@@ -1347,18 +1348,20 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
     # 音：先に読んで長さを知る。audio_offset [秒] だけ遅らせて鳴らす（負なら音の頭を削る）
     pcm = b""
     offset = float(a.get("audio_offset", 0.0))
+    rate_code = adpcm.parse_rate(a.get("audio_rate"), "設定：audio_rate")
+    rate = adpcm.RATES[rate_code]
     if a.get("audio"):
         ap = Path(a["audio"])
         ap = ap if ap.is_absolute() else base_dir / ap
         try:
-            samples = adpcm.load_audio(ap, a.get("gain", 0.0), a.get("audio_start"), a.get("audio_duration"))
+            samples = adpcm.load_audio(ap, a.get("gain", 0.0), a.get("audio_start"), a.get("audio_duration"), rate)
         except subprocess.CalledProcessError as e:
             samples = None
             err = (e.stderr or b"").decode("cp932", "replace").strip().splitlines()
             print(f"音声を読めませんでした（音の無い動画？）。音なしで作ります（{ap.name}"
                   + (f"：{err[-1]}" if err else "") + "）")
         if samples is not None and offset < 0:
-            samples = samples[round(-offset * adpcm.RATE):]
+            samples = samples[round(-offset * rate):]
             offset = 0.0
         if samples is not None and len(samples):
             pcm = adpcm.encode(samples)
@@ -1366,7 +1369,7 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
                 pcm += b"\x88"
             (out / "pcm.dat").write_bytes(pcm)
     off_t = round(offset * VSYNC_HZ)
-    pcm_len_t = (len(pcm) * 2 / adpcm.RATE) * VSYNC_HZ if pcm else 0
+    pcm_len_t = (len(pcm) * 2 / rate) * VSYNC_HZ if pcm else 0
 
     # タイミング。永久ループで音（ADPCM・FM 音源の曲・効果音）があるときは、音ごとに周を数えて（カウンタ <名前>_cnt）
     # every 周ごとに鳴らす。ループの本体は音の間隔と関係なく、状態がくり返す最短の周の数にできる（音のために何十周も並べなくてよい）。
@@ -1380,7 +1383,7 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
             ev = 0
         else:  # 音が鳴り終わるまでの周の数（音の途中で鳴らし直さない）
             ev = int(max(1, -(-(off_t + pcm_len_t) // base_end)))
-        sounds.append(Sound("pcm", "pcs", ["	PCMP	pcm,pcm_end-pcm		* 音"], 2400, off_t, ev, end))
+        sounds.append(Sound("pcm", "pcs", [animcommon.pcm_play_line("pcm", rate_code)], 2400, off_t, ev, end))
     zm_parts, zm_voices = [], []  # FM 音源（Z-MUSIC）の素材と、最初に登録する音色の表
     if a.get("fm"):
         fp = Path(a["fm"])
@@ -1408,7 +1411,8 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
                             int(s.get("every", 1)), end))
     for S in sounds:
         if S.key == "pcm":
-            msg = f"音 {len(pcm) * 2 / adpcm.RATE:.2f} 秒、{S.off_t / VSYNC_HZ:.2f} 秒後に鳴らす"
+            msg = (f"音 {len(pcm) * 2 / rate:.2f} 秒（{adpcm.RATE_NAMES[rate_code]}、{len(pcm)} バイト）、"
+                   f"{S.off_t / VSYNC_HZ:.2f} 秒後に鳴らす")
         else:
             msg = f"{'FM 音源の曲' if S.key == 'fm' else '効果音 ' + S.key}：{S.off_t / VSYNC_HZ:.2f} 秒後に鳴らす"
         if forever:
@@ -1602,6 +1606,8 @@ def build(a: dict, base_dir: Path, stop=False, src_desc="", sim=None):
         L_ = animcommon.with_vwait_head(L_) + animcommon.VWAIT_CODE.split("\n")
     if zm:
         L_ = animcommon.with_zmusic_head(L_) + animcommon.ZMUSIC_CODE.split("\n")
+    if pcm and rate_code != 4:
+        L_ = animcommon.with_adpcm_head(L_) + animcommon.ADPCM_CODE.split("\n")
     if timelog:
         tlpath = timelog_path(out, name)
         L_ += animcommon.timelog_code(tlpath, nominal if nominal is not None else 0)

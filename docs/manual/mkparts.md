@@ -37,7 +37,7 @@ pt mkparts <画像・音声・画像のフォルダ・MML…> --name 名前 [--m
 | -------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------- |
 | `cel`                | `<画像>.cel`（スプライトは `.spr`） | 選んだ面（`--plane`）のセル。下の表                                                          |
 | `pal`                | `<名前>.pal`                        | パレット（全部の画像で共通。`--pal-each` で画像ごと、`--pal-in` で既存のパレットに色を足す） |
-| `pcm`                | `<音声>.pcm`                        | ADPCM（15.625kHz）                                                                           |
+| `pcm`                | `<音声>.pcm`                        | ADPCM（既定 15.625kHz。`--audio-rate` で変えられる）                                         |
 | `zmd`                | `<MML>.zmd`、`<MML>.zse`、`.zmv`    | FM 音源の曲。`--se` で選んだ MML は効果音と音色の表（[FM 音源](fm.md)）                      |
 | `s`                  | `<名前>.s`、`<名前>.json`           | ひな形のスケジュールと、素材の一覧。.s が使う素材も作る                                      |
 
@@ -57,7 +57,8 @@ pt mkparts <画像・音声・画像のフォルダ・MML…> --name 名前 [--m
 - すでに .s があるときは上書きしません（手直しを消さないため）。ただし **`--make` に `s` を入れると .json は作り直します**。
   .json に手で書き足した後は、`--make` に `s` を入れないでください（6 章）。
 - `--build` を付けると、ひな形のまますぐに .pan も作ります。
-- 画像のオプション（`--dither`、`--fast`、`--aspect`、`--fit`、`--transparent`、`--transparent-fringe`、`--transparent-despill`、`--flatten`、`--despeckle`）、音のオプション（`--gain`、`--start`、`--duration`）は mkanim と同じです（[mkanim](mkanim.md)）。
+- 画像のオプション（`--dither`、`--fast`、`--aspect`、`--fit`、`--transparent`、`--transparent-fringe`、`--transparent-despill`、`--flatten`、`--despeckle`）、音のオプション（`--gain`、`--start`、`--duration`、`--audio-rate`）は mkanim と同じです（[mkanim](mkanim.md)）。
+  `--audio-rate` を 15.6 以外にすると、ひな形は音を `PCMR`（[LIBRARY.md](../LIBRARY.md) の 6 章）で鳴らします。
   `--fast` は、データが少し大きくなっても速く描ける形に符号化します（既定は bpica.x と同じ符号化）。
 - ひな形の待ちは VWAIT（予定の時刻で待つ。[mkscene](mkscene.md) の 1 章の注）です。`--wait tmwa` で panic.x の TMWA にできます。`--fps` でひな形の切り替えの速さを決めます（既定 2）。
 - 色の少ない画像なら、png2cel.py（bpica.x 互換）と同じセル・パレットになります。
@@ -144,6 +145,7 @@ pt mkparts <画像・音声・画像のフォルダ・MML…> --name 名前 [--m
 | `SPCG パレット,セル`             | スプライトのパターンを登録する（最初にまとめて）                                                       |
 | `SPON セル`、`SPOF`              | スプライトを表示する、全部消す                                                                         |
 | `PCMP 音,長さ`、`PCMS`           | 音を鳴らす（例：`PCMP pcm_bgm,pcm_bgm_end-pcm_bgm`）、止める                                           |
+| `PCMR 音,長さ,レート`            | 音をレート（0＝3.9kHz、1＝5.2kHz、2＝7.8kHz、3＝10.4kHz、4＝15.6kHz）で鳴らす（`adpcm.h`。LIBRARY.md） |
 | `VWAIT n`                        | 予定の時刻を n カウント（1 カウント ≒ 18.03ms）進めて、そこまで待つ                                    |
 | `VWINIT`                         | 予定の時刻を数え直す（最初と、キー待ちの後）                                                           |
 | `TMWA n`                         | 前の TMWA から n カウント待つ（panic.x の待ち。遅れは取り戻さない）                                    |

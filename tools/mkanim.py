@@ -15,6 +15,7 @@ r"""mkanim.py : 画像（PNG・JPEG など）の連番または動画 1 本か�
   --stabilize T  前のコマとの色の差が T 以下のドットは前のコマの色のままにする（実写などのゆらぎ対策。目安 16〜24）
   --audio    音声ファイル（wav/mp3 など）。動画を渡したときは、指定しなければ動画の音を使う（--no-audio で音なし）
   --gain     音声の音量調整 [dB]（既定 0）
+  --audio-rate kHz   音のサンプリングレート：15.6（既定）、10.4、7.8、5.2、3.9。下げると音のデータが小さくなる
   --audio-offset 秒  音を鳴らし始める時刻（負なら音の頭を削る）
   --audio-every N    永久ループで N 周ごとに音を鳴らし直す（既定は音の長さから自動、0 で最初に 1 回だけ）
   --fm ファイル  FM 音源の曲（Z-MUSIC ver2 の MML（.zms／.opm）か ZMD）。再生には Z-MUSIC（ZMSC.X など）の常駐が要る。
@@ -121,6 +122,8 @@ def scene_config(a) -> dict:
         cfg["loop"] = "forever"
         cfg["exit_key"] = a.exit_key
     cfg["audio_offset"] = a.audio_offset
+    if a.audio_rate is not None:
+        cfg["audio_rate"] = a.audio_rate
     if a.fm:
         cfg["fm"] = str(Path(a.fm).resolve())
         cfg["fm_offset"] = a.fm_offset
@@ -264,6 +267,7 @@ def main(argv):
     ap.add_argument("--audio", type=Path)
     ap.add_argument("--no-audio", action="store_true")
     ap.add_argument("--gain", type=float, default=0.0)
+    ap.add_argument("--audio-rate", help="音のサンプリングレート [kHz]：15.6（既定）、10.4、7.8、5.2、3.9")
     ap.add_argument("--audio-offset", type=float, default=0.0, help="音を鳴らし始める時刻 [秒]（負なら音の頭を削る）")
     ap.add_argument("--audio-every", type=int, help="永久ループで何周ごとに音を鳴らし直すか（0 なら最初に 1 回だけ）")
     ap.add_argument("--fm", type=Path, help="FM 音源の曲（Z-MUSIC ver2 の MML か ZMD）")

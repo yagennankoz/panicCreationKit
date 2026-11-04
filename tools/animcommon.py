@@ -658,6 +658,30 @@ def with_zmusic_head(lines):
     return out
 
 
+# ---- ADPCM をサンプリングレートを選んで鳴らす（x68/lib/adpcm.h・adpcm.s。docs/LIBRARY.md）----
+# マクロ PCMR 頭,長さ,レート（0＝3.9kHz〜4＝15.6kHz）。15.6kHz なら panic.x の PCMP で足りるので使わない。
+ADPCM_HEAD = "\t.include\tadpcm.h\t\t* ADPCM のレートを選んで鳴らすマクロ（x68/lib/。docs/LIBRARY.md）"
+ADPCM_CODE = "\n* ---- ADPCM のルーチン（x68/lib/adpcm.s。EXIT の後、素材より前に置く）----\n\t.include\tadpcm.s"
+
+
+def pcm_play_line(label, rate_code, comment="音"):
+    """ADPCM の音（label〜label_end）を鳴らす行。15.6kHz なら PCMP、ほかは PCMR（adpcm.h）"""
+    if rate_code == 4:
+        return f"\tPCMP\t{label},{label}_end-{label}\t\t* {comment}"
+    return f"\tPCMR\t{label},{label}_end-{label},{rate_code}\t* {comment}（{adpcm.RATE_NAMES[rate_code]}）"
+
+
+def with_adpcm_head(lines):
+    """.include sch.h の直後に .include adpcm.h を入れる"""
+    out = []
+    for ln in lines:
+        out.append(ln)
+        if ln.startswith("\t.include\tsch.h"):
+            out.append(ADPCM_HEAD)
+    assert ADPCM_HEAD in out, ".include sch.h が見つかりません"
+    return out
+
+
 def extract_video(video: Path, dst: Path, fps, start=None, duration=None, aspect=None, fit=None, raw=0):
     """ffmpeg で動画から 256x256 の PNG 連番を切り出す（縦横比を保って縮小し中央を切り出す）。
     aspect（1 ドットの横÷縦）を指定すると、横 256*aspect の範囲を切り出して 256 に縮める。

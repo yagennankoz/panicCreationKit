@@ -1,10 +1,13 @@
 """adpcm.py : X68000 の ADPCM（OKI MSM6258、4 ビット）のエンコーダ／デコーダ
 
 使い方:
-  pt adpcm enc <入力（wav/mp3 など）> <出力.pcm> [--gain dB]
-      ffmpeg で 15625Hz モノラルにしてから ADPCM にする（panic.x の PCMP は 15.625kHz 固定）
-  pt adpcm dec <入力.pcm> <出力.wav>
+  pt adpcm enc <入力（wav/mp3 など）> <出力.pcm> [--gain dB] [--rate レート]
+      ffmpeg でモノラルにしてから ADPCM にする
+  pt adpcm dec <入力.pcm> <出力.wav> [--rate レート]
       確認用に WAV に戻す
+
+  --rate  サンプリングレート [kHz]：15.6（既定）、10.4、7.8、5.2、3.9。
+          panic.x の PCMP は 15.6kHz だけ。ほかのレートの音は x68/lib/adpcm.h の PCMR で鳴らす
 
 形式（MAME の msm6258 と同じ方式）:
   - 1 バイトに 2 サンプル。**下位 4 ビットが先**（実機の .PCM で確認）。
@@ -20,6 +23,9 @@ from pathlib import Path
 import numpy as np
 
 RATE = 15625
+# サンプリングレートの番号（IOCS _ADPCMOUT などの D1 の上のバイト）→ 周波数 [Hz]。8MHz か 4MHz を 512／768／1024 で割る
+RATES = {4: 15625.0, 3: 8e6 / 768, 2: 7812.5, 1: 4e6 / 768, 0: 3906.25}
+RATE_NAMES = {4: "15.6kHz", 3: "10.4kHz", 2: "7.8kHz", 1: "5.2kHz", 0: "3.9kHz"}
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
 
@@ -78,9 +84,25 @@ def encode(samples: np.ndarray) -> bytes:
     return (a[0::2] | (a[1::2] << 4)).tobytes()
 
 
-def load_audio(path, gain_db=0.0, start=None, duration=None) -> np.ndarray:
-    """ffmpeg で 15625Hz モノラル 16 ビットにして、12 ビットの範囲に縮める（start/duration は秒）"""
-    af = "lowpass=7000"
+def parse_rate(v, what="audio_rate") -> int:
+    """サンプリングレートの指定（kHz の 15.6／10.4／7.8／5.2／3.9、または Hz の 15625 など）→ 番号（0〜4）。None なら 4"""
+    if v is None:
+        return 4
+    try:
+        f = float(str(v).strip().lower().removesuffix("khz").removesuffix("hz"))
+    except ValueError:
+        f = -1.0
+    if 0 < f < 100:
+        f *= 1000  # kHz で書いたもの
+    code = min(RATES, key=lambda c: abs(RATES[c] - f))
+    if f <= 0 or abs(RATES[code] - f) > RATES[code] * 0.01:
+        raise SystemExit(f"{what}：サンプリングレートは 15.6、10.4、7.8、5.2、3.9（kHz）のどれかにしてください（今は {v!r}）")
+    return code
+
+
+def load_audio(path, gain_db=0.0, start=None, duration=None, rate=RATE) -> np.ndarray:
+    """ffmpeg でモノラル 16 ビット（rate [Hz]）にして、12 ビットの範囲に縮める（start/duration は秒）"""
+    af = f"lowpass={round(rate * 0.448)}"  # 15625Hz で 7000Hz
     if gain_db:
         af += f",volume={gain_db}dB"
     cmd = [FFMPEG, "-v", "error"]
@@ -88,16 +110,16 @@ def load_audio(path, gain_db=0.0, start=None, duration=None) -> np.ndarray:
         cmd += ["-ss", str(start)]
     if duration is not None:
         cmd += ["-t", str(duration)]
-    cmd += ["-i", str(path), "-vn", "-ac", "1", "-ar", str(RATE), "-af", af, "-f", "s16le", "-"]
+    cmd += ["-i", str(path), "-vn", "-ac", "1", "-ar", str(round(rate)), "-af", af, "-f", "s16le", "-"]
     r = subprocess.run(cmd, capture_output=True, check=True)
     return (np.frombuffer(r.stdout, "<i2").astype(np.int32) >> 4).astype(np.int16)
 
 
-def save_wav(path, samples):
+def save_wav(path, samples, rate=RATE):
     with wave.open(str(path), "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
-        w.setframerate(RATE)
+        w.setframerate(round(rate))
         w.writeframes((samples.astype(np.int16) << 4).astype("<i2").tobytes())
 
 
@@ -107,6 +129,10 @@ def main(argv):
         return 1
     import cli
     cli.need_file(argv[2], "入力ファイル")
+    rate = RATE
+    if "--rate" in argv:
+        k = argv.index("--rate")
+        rate = RATES[parse_rate(argv[k + 1] if k + 1 < len(argv) else "", "--rate")]
     if argv[1] == "enc":
         gain = 0.0
         if "--gain" in argv:
@@ -115,11 +141,11 @@ def main(argv):
                 gain = float(argv[k + 1])
             except (IndexError, ValueError):
                 raise SystemExit("--gain の後に音量の調整 [dB] を数で書いてください（例 --gain -3）")
-        data = encode(load_audio(argv[2], gain))
+        data = encode(load_audio(argv[2], gain, rate=rate))
         Path(argv[3]).write_bytes(data)
-        print(f"{argv[3]}: {len(data)} バイト（{len(data) * 2 / RATE:.2f} 秒）")
+        print(f"{argv[3]}: {len(data)} バイト（{len(data) * 2 / rate:.2f} 秒）")
     else:
-        save_wav(argv[3], decode(Path(argv[2]).read_bytes()))
+        save_wav(argv[3], decode(Path(argv[2]).read_bytes()), rate)
     return 0
 
 

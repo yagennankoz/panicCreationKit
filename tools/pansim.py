@@ -522,6 +522,8 @@ class Sim:
                 self.vw_acc = 0
             elif name == "BSB1" and self.d[a[0] + 2:a[0] + 6] == b"PTVW":
                 self.vwait(a[1], at)
+            elif name == "BSB2" and self.d[a[0] + 2:a[0] + 6] == b"PTAP":  # PCMR（x68/lib/adpcm.s）：PCMP と同じに扱う
+                self.pcm.append((self.t, a[2] & 0xFFFFFF))
             elif name in ("BSUB", "BSB1", "BSB2") and bytes(self.d[a[0] + 2:a[0] + 6]) in ZM_US:
                 mark = bytes(self.d[a[0] + 2:a[0] + 6])  # Z-MUSIC（x68/lib/zmusic.s）：仮の時間だけ進める
                 self.zm.append((self.t, ZM_NAMES[mark]))

@@ -24,8 +24,8 @@ pt pansim <file.pan> [--gif out.gif] [--png フォルダ] [--seconds 秒] [--clo
 | `mkparts.py`         | `pt mkparts <画像・音声…> --name 名前 [--make …]`            | セル・パレット・ADPCM と .s のひな形を作る（[手で作る（mkparts＋buildPan）](mkparts.md) の 2 章）                                         |
 | `buildPan.py`        | `pt buildPan <名前>.s [--sim] [--clock]`                     | .s から .pan を作る。素材の一覧（.json）があれば素材もつなげる（[手で作る（mkparts＋buildPan）](mkparts.md) の 7 章）。panbuild.py も同じ |
 | `png2cel.py`         | `pt png2cel [-p] [-a] [-c] [-t 色] <in.png> <out.cel> <pal>` | PNG → a_enc セル（bpica.x 互換）。`-p` でパレットを新しく作る                                                                             |
-| `adpcm.py`（enc）    | `pt adpcm enc <音> <out.pcm> [--gain dB]`                    | 音を ADPCM（MSM6258、15.625kHz）に変換する                                                                                                |
-| `adpcm.py`（dec）    | `pt adpcm dec <in.pcm> <out.wav>`                            | ADPCM を WAV に戻して確かめる                                                                                                             |
+| `adpcm.py`（enc）    | `pt adpcm enc <音> <out.pcm> [--gain dB] [--rate kHz]`       | 音を ADPCM（MSM6258）に変換する。`--rate` はサンプリングレート（15.6、10.4、7.8、5.2、3.9。既定 15.6）                                   |
+| `adpcm.py`（dec）    | `pt adpcm dec <in.pcm> <out.wav> [--rate kHz]`               | ADPCM を WAV に戻して確かめる                                                                                                             |
 | `mkpan.py`           | `pt mkpan <in.x> [out.pan]`                                  | .x → .pan（mkpan.x 互換）                                                                                                                 |
 | `predict_time.py`    | `pt predict_time <名前>`                                     | x68/anim/<名前> の再生時間の大まかな予測（pansim の方が正確）                                                                             |
 | `make_test_anim.py`  | —                                                            | テスト用の素材を作る                                                                                                                      |

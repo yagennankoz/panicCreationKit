@@ -19,7 +19,7 @@
       <画像>.spr   スプライトのセル（bpic -s と同じ形。透明でない所を囲む 16 ドット単位の長方形を切り出し、位置も入る）。
                    SPCG でパターンを登録し、SPON で表示する（全部の画像で PCG は 256 個まで）
       <名前>.pal   16 色のパレット（34 バイト。TPAL <--sprite-pal の番号> で使う）
-    <音声>.pcm     ADPCM（MSM6258、15.625kHz、下位 4 ビットが先。PCMP で使う）
+    <音声>.pcm     ADPCM（MSM6258、既定 15.625kHz、下位 4 ビットが先。PCMP で使う。ほかのレートは PCMR）
     <MML>.zmd      FM 音源の曲（Z-MUSIC ver2 の ZMD。ZMPL で鳴らす。再生には Z-MUSIC の常駐が要る）
     <MML>.zse      --se で選んだ MML は効果音（ZSEP で鳴らす）。音色の定義があれば <MML>v.zmv（ZMVS で先に登録）も
     <名前>.s       スケジュールのひな形（音を鳴らし、画像を --fps の速さで順に表示する。選んだ面の命令で）。自由に書き換えてよい
@@ -46,6 +46,8 @@
   --transparent-despill [N]                        ふちの近くの色のかぶり取り（mkanim と同じ）
   --flatten T、--despeckle [T]                     単色のむらを均す、孤立した 1 ドットを消す（mkanim と同じ）
   --gain dB、--start 秒、--duration 秒             音量の調整、音の何秒目から何秒分を使うか（全部の音声に）
+  --audio-rate kHz     音のサンプリングレート：15.6（既定）、10.4、7.8、5.2、3.9。15.6 以外は、ひな形で
+                       x68/lib/adpcm.h の PCMR を使う
   --fps N              ひな形の .s で、画像を何枚／秒で切り替えるか（既定 2）
   --wait tmwa          ひな形の待ちを panic.x の TMWA にする。既定は vwait（VWAIT：再生の頭からの予定の時刻で待ち、
                        遅れたコマの分を後で取り戻す）
@@ -150,7 +152,7 @@ def make_cels(frames, a, base_pal, top):
 
 
 def template(name, images, audios, pal_labels, fps, has_cel, has_pcm, plane="g0", sprite_pal=1, wait_mode="vwait",
-             zm_bgm=(), zm_se=(), zm_voice=()):
+             zm_bgm=(), zm_se=(), zm_voice=(), rate_code=4):
     """スケジュールのひな形：音を鳴らし、画像を順に表示する。
     グラフィック・テキストは 2 か所を交互に描いてスクロールで切り替え、スプライトは SPOF／SPON で切り替える"""
     wait = max(1, round(TICK_HZ / fps))
@@ -173,9 +175,9 @@ def template(name, images, audios, pal_labels, fps, has_cel, has_pcm, plane="g0"
         L += ["\tTMWA\t1\t\t\t* タイマーの基準", animcommon.VWAIT_INIT]
     if has_pcm and audios:
         lab = audios[0][1]
-        L.append(f"\tPCMP\t{lab},{lab}_end-{lab}\t* 音（{audios[0][0].name}）")
+        L.append(animcommon.pcm_play_line(lab, rate_code, f"音（{audios[0][0].name}）"))
         for _, other in audios[1:]:
-            L.append(f"*\tPCMP\t{other},{other}_end-{other}\t* ほかの音（鳴らす所に移して使う）")
+            L.append("*" + animcommon.pcm_play_line(other, rate_code, "ほかの音（鳴らす所に移して使う）"))
     for v in zm_voice:
         L.append(f"\tZMVS\t{v}\t\t\t* 効果音の音色を登録する")
     for k, (path, lab) in enumerate(zm_bgm):
@@ -216,6 +218,8 @@ def template(name, images, audios, pal_labels, fps, has_cel, has_pcm, plane="g0"
         L = animcommon.with_vwait_head(L) + animcommon.VWAIT_CODE.split("\n")
     if zm_bgm or zm_se or zm_voice:
         L = animcommon.with_zmusic_head(L) + animcommon.ZMUSIC_CODE.split("\n")
+    if has_pcm and audios and rate_code != 4:
+        L = animcommon.with_adpcm_head(L) + animcommon.ADPCM_CODE.split("\n")
     L += ["",
           "* ---- 素材のラベル（buildPan.py が作る。この .include はソースの最後に置くこと）----",
           f"\t.include\t{name}_d.h", "", "\t.end", ""]
@@ -248,6 +252,7 @@ def main(argv):
     ap.add_argument("--gain", type=float, default=0.0)
     ap.add_argument("--start", type=float)
     ap.add_argument("--duration", type=float)
+    ap.add_argument("--audio-rate")
     ap.add_argument("--fps", type=float, default=2.0)
     ap.add_argument("--wait", choices=["tmwa", "vwait"], default="vwait")
     ap.add_argument("--clock", default=a_enc.DEFAULT_CLOCK)
@@ -277,6 +282,8 @@ def main(argv):
     if a.build and "s" not in make:
         raise SystemExit("--build には .s が要ります（--make に s を入れてください）")
     animcommon.parse_key_colors(a.transparent)  # 書き方の確認
+    rate_code = adpcm.parse_rate(a.audio_rate, "--audio-rate")
+    rate = adpcm.RATES[rate_code]
 
     images, audios, mmls = collect(a.inputs)
     if images and animcommon.parse_key_colors(a.transparent) == ["auto"]:  # 透明色を入力の画像全体のまわりの色から決める
@@ -371,12 +378,12 @@ def main(argv):
     # ---- 音声：ADPCM ----
     if audios and ("pcm" in make or "s" in make):
         for path, short in aud_items:
-            data = adpcm.encode(adpcm.load_audio(path, a.gain, a.start, a.duration))
+            data = adpcm.encode(adpcm.load_audio(path, a.gain, a.start, a.duration, rate))
             if len(data) % 2:
                 data += b"\x88"
             (out / f"{short}.pcm").write_bytes(data)
             parts.append([f"pcm_{short}", f"{short}.pcm"])
-            print(f"  ADPCM {short}.pcm：{len(data)} バイト（{len(data) * 2 / adpcm.RATE:.2f} 秒）← {path.name}")
+            print(f"  ADPCM {short}.pcm：{len(data)} バイト（{len(data) * 2 / rate:.2f} 秒、{adpcm.RATE_NAMES[rate_code]}）← {path.name}")
 
     # ---- MML：FM 音源の曲・効果音（Z-MUSIC ver2） ----
     zm_bgm, zm_se, zm_voice = [], [], []
@@ -413,7 +420,7 @@ def main(argv):
             labs = [pal_labels[k] for k in range(len(img_items)) if k in cel_labels]
             text = template(name, shown, [(p, f"pcm_{s}") for p, s in aud_items],
                             labs, a.fps, bool(shown), bool(audios), plane, a.sprite_pal, a.wait,
-                            zm_bgm, zm_se, zm_voice)
+                            zm_bgm, zm_se, zm_voice, rate_code)
             animcommon.write_sjis(src, text)
             print(f"  ひな形 {src.name}")
         (out / f"{name}.json").write_text(json.dumps(
